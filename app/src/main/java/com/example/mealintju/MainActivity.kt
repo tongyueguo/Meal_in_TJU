@@ -1,9 +1,11 @@
 package com.example.mealintju
 
 import android.animation.ObjectAnimator
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.view.WindowManager
+import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -31,7 +33,6 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,10 +54,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
@@ -70,9 +74,15 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Update
 import com.example.mealintju.ui.theme.MealInTJUTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.util.Calendar
+import java.util.Date
 
 class MainActivity : ComponentActivity() {
+    @SuppressLint("CoroutineCreationDuringComposition")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -82,7 +92,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainView()
+                    MainView(applicationContext)
                 }
             }
         }
@@ -90,12 +100,63 @@ class MainActivity : ComponentActivity() {
 }
 
 
+@Entity(primaryKeys = ["year", "month","day","mealNumber"])
+data class mealInfo(
+    @ColumnInfo(name = "year")
+    var year: Int = 0,
+    @ColumnInfo(name = "month")
+    var month: Int = 0,
+    @ColumnInfo(name = "day")
+    var day: Int = 0,
+    @ColumnInfo(name = "mealNumber")
+    var mealNumber: Int = 0 ,
+    @ColumnInfo(name = "canteenNumber")
+    var canteenNumber: Int = 0,
+    @ColumnInfo(name = "windowText")
+    var windowText: String? = null ,
+    @ColumnInfo(name = "result")
+    var result: Int? = 0
+)
+@Dao
+interface mealInfoDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(mealInfo: mealInfo)
+    @Delete
+    suspend fun delete(mealInfo: mealInfo)
+    @Update
+    suspend fun update(mealInfo: mealInfo)
+    @Query("SELECT * FROM mealInfo")
+    suspend fun getAll(): List<mealInfo>
+}
+@Database(
+    entities = [mealInfo::class],
+    version = 1,
+    exportSchema = false
+)
+abstract class mealInfoDatabase : RoomDatabase() {
+    abstract fun mealInfoDao(): mealInfoDao
+    companion object {
+        @Volatile
+        private var INSTANCE: mealInfoDatabase? = null
+        fun getInstance(context: Context): mealInfoDatabase =
+            INSTANCE ?: synchronized(this) {
+                INSTANCE ?: buildDatabase(context).also { INSTANCE = it }
+            }
+        private fun buildDatabase(context: Context) =
+            Room.databaseBuilder(context.applicationContext, mealInfoDatabase::class.java, "kot.db")
+                .build()
+    }
+}
+
+
+
+
 @Composable
-fun MainView(){
+fun MainView(context: Context){
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = "settingPage"){
-        composable("mainPage"){
-            mainPage(navController = navController)
+    NavHost(navController = navController, startDestination = "mainPage"){
+        composable("mainPage",){
+            mainPage(navController = navController, context = context)
         }
         composable("settingPage"){
             settingPage(navController = navController)
@@ -108,7 +169,8 @@ fun MainView(){
 
 @Composable
 fun mainPage(modifier: Modifier = Modifier,
-             navController: NavController
+             navController: NavController,
+             context: Context
 ) {
     var canteenNumber by remember { mutableStateOf(0) }
     var change by remember { mutableStateOf(false) }
@@ -119,6 +181,7 @@ fun mainPage(modifier: Modifier = Modifier,
         4->R.string.canteen5Text
         else->R.string.nullText
     }
+    val timeGetTime = Date().time
     var windowText:String by remember { mutableStateOf("") }
     val buttonText = if(change)R.string.changeText else R.string.whatToEatText
     val buttonHeight by animateDpAsState(
@@ -126,51 +189,6 @@ fun mainPage(modifier: Modifier = Modifier,
         animationSpec = tween(durationMillis = 1500, easing = LinearOutSlowInEasing),
         label = ""
     )
-    /*if (change){
-        Text(
-            text = stringResource(R.string.beforeCanteenText),
-            //color = Color.Blue,
-            fontSize = 30.sp,
-            textAlign= TextAlign.Center,
-            //fontFamily = FontFamily.Serif,
-            modifier=Modifier.paddingFromBaseline(top=220.dp)
-        )
-    }
-    Text(
-        text = stringResource(canteenText),
-        //color = Color.Blue,
-        fontSize = 60.sp,
-        textAlign= TextAlign.Center,
-        //fontFamily = FontFamily.Serif,
-        modifier=Modifier.paddingFromBaseline(top=300.dp)
-    )
-
-    Text(
-        text = windowText,
-        //color = Color.Blue,
-        fontSize = 60.sp,
-        textAlign= TextAlign.Center,
-        //fontFamily = FontFamily.Serif,
-        modifier=Modifier.paddingFromBaseline(top=400.dp)
-    )
-    Button(
-        onClick =
-        {
-            change=true
-            canteenNumber=randomCanteen()
-            windowText=randomWindow(canteenNumber)
-
-        },
-        modifier= Modifier
-            .padding(10.dp)
-            .paddingFromBaseline(top = buttonHeight)
-            .defaultMinSize()
-    ) {
-        Text(
-            text = stringResource(buttonText),
-            fontSize = 40.sp
-        )
-    }*/
     ConstraintLayout(
         Modifier.fillMaxWidth()
     ){
@@ -246,6 +264,23 @@ fun mainPage(modifier: Modifier = Modifier,
                 change=true
                 canteenNumber=randomCanteen()
                 windowText=randomWindow(canteenNumber)
+                var time = System.currentTimeMillis();
+                var mCalendar:Calendar = Calendar.getInstance();
+                mCalendar.setTimeInMillis(time);
+                var year = mCalendar.get(Calendar.YEAR)
+                var month = mCalendar.get(Calendar.MONTH)+1
+                var day = mCalendar.get(Calendar.DAY_OF_MONTH)
+                var apm = mCalendar.get(Calendar.AM_PM);
+                GlobalScope.launch(Dispatchers.IO) {
+                    val mealInfo = mealInfo()
+                    mealInfo.year = year
+                    mealInfo.month = month
+                    mealInfo.day = day
+                    mealInfo.mealNumber = apm
+                    mealInfo.canteenNumber = canteenNumber
+                    mealInfo.windowText = windowText
+                    mealInfo.result = 5
+                    mealInfoDatabase.getInstance(context).mealInfoDao().insert(mealInfo)}
 
             },
             modifier= Modifier
@@ -367,6 +402,6 @@ fun randomWindow(canteenNumber:Int): String {
 fun GreetingPreview() {
     MealInTJUTheme {
         val navController= rememberNavController()
-        mainPage(navController = navController)
+       // mainPage(navController = navController)
     }
 }
