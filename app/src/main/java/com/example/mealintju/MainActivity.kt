@@ -123,20 +123,19 @@ abstract class mealInfoDatabase : RoomDatabase() {
     companion object {
         @Volatile
         private var INSTANCE: mealInfoDatabase? = null
-        fun getInstance(context: Context): mealInfoDatabase =
-            INSTANCE ?: synchronized(this) {
-                INSTANCE ?: buildDatabase(context).also { INSTANCE = it }
+        fun getDatabase(context: Context): mealInfoDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context,
+                    mealInfoDatabase::class.java,
+                    "mealInfoDatabase"
+                ).build()
+                INSTANCE = instance
+                instance
             }
-        private fun buildDatabase(context: Context) =
-            Room.databaseBuilder(context.applicationContext, mealInfoDatabase::class.java, "kot.db")
-                //.allowMainThreadQueries()
-                .build()
+        }
     }
 }
-
-//https://www.jianshu.com/p/031efffd6c46
-////////////////////////////////////////
-
 @Composable
 fun MainView(context: Context){
     val navController = rememberNavController()
@@ -271,7 +270,7 @@ fun queryMealInfo(context: Context): mealInfo= runBlocking{
     val mCalendar= getCalendar()
     var mealInfo=mealInfo()
     val query = launch{
-            mealInfo=mealInfoDatabase.getInstance(context).mealInfoDao().get(mCalendar.get(Calendar.YEAR),mCalendar.get(Calendar.MONTH)+1,mCalendar.get(Calendar.DAY_OF_MONTH),mCalendar.get(Calendar.AM_PM))
+            mealInfo=mealInfoDatabase.getDatabase(context).mealInfoDao().get(mCalendar.get(Calendar.YEAR),mCalendar.get(Calendar.MONTH)+1,mCalendar.get(Calendar.DAY_OF_MONTH),mCalendar.get(Calendar.AM_PM))
     }
     query.join()
     return@runBlocking mealInfo
@@ -289,7 +288,7 @@ fun checkStatus(context: Context):Int= runBlocking{
     var flag=0
     val query = launch{
         try {
-        mealInfo=mealInfoDatabase.getInstance(context).mealInfoDao().get(mCalendar.get(Calendar.YEAR),mCalendar.get(Calendar.MONTH)+1,mCalendar.get(Calendar.DAY_OF_MONTH),mCalendar.get(Calendar.AM_PM))
+            mealInfo=mealInfoDatabase.getDatabase(context).mealInfoDao().get(mCalendar.get(Calendar.YEAR),mCalendar.get(Calendar.MONTH)+1,mCalendar.get(Calendar.DAY_OF_MONTH),mCalendar.get(Calendar.AM_PM))
         if (mealInfo.result==0)flag=0 else flag=1
         }catch(_:Exception){}
     }
@@ -307,7 +306,7 @@ fun insertDatabase(canteenNumber: Int, windowText: String,context: Context) {
         mealInfo.canteenNumber = canteenNumber
         mealInfo.windowText = windowText
         mealInfo.result = 5
-        mealInfoDatabase.getInstance(context).mealInfoDao().insert(mealInfo)
+        mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo)
     }
 }
 @Composable
@@ -347,6 +346,8 @@ fun settingPage(modifier: Modifier = Modifier, navController: NavController, ){
                     start.linkTo(parent.start, margin = 60.dp)
                 }
         ){
+            Text(text = "Meal In TJU")
+            Text(text = "© 2023 TongyueGuo")
         //TODO
         }
     }
@@ -399,7 +400,7 @@ fun historyDisplayText(context: Context){
         mutableStateOf(StringBuilder())
     }
     LaunchedEffect(null) {
-        var all=mealInfoDatabase.getInstance(context).mealInfoDao().getAll()
+        var all=mealInfoDatabase.getDatabase(context).mealInfoDao().getAll()
         for (mealInfo in all){
             str.append(mealInfo.year.toString()
                     +context.getString(R.string.yearText)
