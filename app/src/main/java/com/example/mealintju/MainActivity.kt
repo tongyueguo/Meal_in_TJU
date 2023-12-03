@@ -17,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -52,14 +53,10 @@ import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Update
-import androidx.room.util.query
 import com.example.mealintju.ui.theme.MealInTJUTheme
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import java.util.Calendar
 
@@ -148,6 +145,9 @@ fun MainView(context: Context){
         }
         composable("historyPage"){
             historyPage(navController = navController, context = context)
+        }
+        composable("analysePage"){
+            analysePage(navController = navController, context = context)
         }
     }
 }
@@ -241,7 +241,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
                     start.linkTo(parent.start)
                     end.linkTo(parent.end)
                 }
-        )
+        )//TODO 手动输入
         Button(
             onClick =
             {
@@ -348,7 +348,7 @@ fun settingPage(modifier: Modifier = Modifier, navController: NavController, ){
         ){
             Text(text = "Meal In TJU")
             Text(text = "© 2023 TongyueGuo")
-        //TODO
+        //TODO 设置界面等
         }
     }
 }
@@ -358,8 +358,8 @@ fun historyPage(modifier: Modifier = Modifier, navController: NavController, con
     ConstraintLayout(
         Modifier.fillMaxWidth()
     ){
-        val (text1,text2,icon1) = createRefs()
-        var scrollState= rememberScrollState()
+        val (text1,text2,icon1,icon2) = createRefs()
+        var scrollState= rememberScrollState()//TODO 分析历史记录等
         IconButton(
             onClick = {
                 navController.navigate("mainPage")
@@ -371,6 +371,18 @@ fun historyPage(modifier: Modifier = Modifier, navController: NavController, con
                 }
         ){
             Icon(Icons.Filled.ArrowBack, null)
+        }
+        IconButton(
+            onClick = {
+                navController.navigate("analysePage")
+            },
+            modifier=Modifier
+                .constrainAs(icon2) {
+                    top.linkTo(parent.top, margin = 20.dp)
+                    end.linkTo(parent.end,margin = 20.dp)
+                }
+        ){
+            Icon(Icons.Filled.Info, null)
         }
         Text(
             text = stringResource(R.string.historyText),
@@ -420,6 +432,49 @@ fun historyDisplayText(context: Context){
         lineHeight = 40.sp
     )
 }
+@Composable
+fun analysePage(navController: NavController,context: Context){
+    ConstraintLayout(
+        Modifier.fillMaxWidth()
+    ){
+        val (text1,text2,icon1,icon2) = createRefs()
+        var scrollState= rememberScrollState()//TODO 分析历史记录等
+        IconButton(
+            onClick = {
+                navController.navigate("historyPage")
+            },
+            modifier=Modifier
+                .constrainAs(icon1) {
+                    top.linkTo(parent.top, margin = 20.dp)
+                    start.linkTo(parent.start,margin=20.dp)
+                }
+        ){
+            Icon(Icons.Filled.ArrowBack, null)
+        }
+        Text(
+            text = stringResource(R.string.analyseText),
+            fontSize = 30.sp,
+            modifier=Modifier
+                .constrainAs(text1) {
+                    top.linkTo(parent.top, margin = 23.dp)
+                    start.linkTo(parent.start,margin = 60.dp)
+                }
+        )
+        Column (
+            modifier= Modifier
+                .verticalScroll(scrollState)
+                .fillMaxSize()
+                .constrainAs(text2) {
+                    top.linkTo(parent.top, margin = 80.dp)
+                    start.linkTo(parent.start, margin = 60.dp)
+                }
+        ){
+        }
+    }
+
+
+}
+
 fun mealNumberToTextId(mealNumber: Int): Int {
     var result=when(mealNumber){
         0->R.string.lunchText
