@@ -1,31 +1,17 @@
 package com.example.mealintju
 
-import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
-import android.os.Bundle
-import android.util.DisplayMetrics
-import android.view.WindowManager
 import android.content.Context
+import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateIntAsState
-import androidx.compose.animation.core.animateRectAsState
-import androidx.compose.animation.core.animateValueAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.paddingFromBaseline
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -36,31 +22,25 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
@@ -68,18 +48,21 @@ import androidx.room.Delete
 import androidx.room.Entity
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
-import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Update
+import androidx.room.util.query
 import com.example.mealintju.ui.theme.MealInTJUTheme
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import java.util.Calendar
-import java.util.Date
+
 
 class MainActivity : ComponentActivity() {
     @SuppressLint("CoroutineCreationDuringComposition")
@@ -98,8 +81,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-
+////////////////////////////
+//Room数据库
 @Entity(primaryKeys = ["year", "month","day","mealNumber"])
 data class mealInfo(
     @ColumnInfo(name = "year")
@@ -113,7 +96,7 @@ data class mealInfo(
     @ColumnInfo(name = "canteenNumber")
     var canteenNumber: Int = 0,
     @ColumnInfo(name = "windowText")
-    var windowText: String? = null ,
+    var windowText: String = "" ,
     @ColumnInfo(name = "result")
     var result: Int? = 0
 )
@@ -127,6 +110,8 @@ interface mealInfoDao {
     suspend fun update(mealInfo: mealInfo)
     @Query("SELECT * FROM mealInfo")
     suspend fun getAll(): List<mealInfo>
+    @Query("SELECT * FROM mealInfo WHERE year=:year AND month=:month AND day=:day AND mealNumber=:mealNumber")
+    suspend fun get(year: Int,month: Int,day: Int,mealNumber: Int):mealInfo
 }
 @Database(
     entities = [mealInfo::class],
@@ -144,48 +129,48 @@ abstract class mealInfoDatabase : RoomDatabase() {
             }
         private fun buildDatabase(context: Context) =
             Room.databaseBuilder(context.applicationContext, mealInfoDatabase::class.java, "kot.db")
+                //.allowMainThreadQueries()
                 .build()
     }
 }
 
-
-
+//https://www.jianshu.com/p/031efffd6c46
+////////////////////////////////////////
 
 @Composable
 fun MainView(context: Context){
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "mainPage"){
-        composable("mainPage",){
+        composable("mainPage"){
             mainPage(navController = navController, context = context)
         }
         composable("settingPage"){
             settingPage(navController = navController)
         }
         composable("historyPage"){
-            historyPage(navController = navController)
+            historyPage(navController = navController, context = context)
         }
     }
 }
-
 @Composable
-fun mainPage(modifier: Modifier = Modifier,
-             navController: NavController,
-             context: Context
-) {
+fun mainPage(modifier: Modifier = Modifier, navController: NavController, context: Context) {
+    var status by remember {mutableStateOf(checkStatus(context))}//0:无记录  1:已有记录从数据库读  2:已有记录不从数据库读数据
     var canteenNumber by remember { mutableStateOf(0) }
-    var change by remember { mutableStateOf(false) }
-    val canteenText=when(canteenNumber){
-        1->R.string.canteen1Text
-        2->R.string.canteen3Text
-        3->R.string.canteen4Text
-        4->R.string.canteen5Text
+    val mealInfo= queryMealInfo(context)
+    val canteenTextId=when(status){
+        1->canteenNumberToCanteenTextId(mealInfo.canteenNumber)
+        2->canteenNumberToCanteenTextId(canteenNumber)
         else->R.string.nullText
     }
-    val timeGetTime = Date().time
-    var windowText:String by remember { mutableStateOf("") }
-    val buttonText = if(change)R.string.changeText else R.string.whatToEatText
+    var windowText by remember { mutableStateOf("") }
+    val windowTextDisplay:String =when(status){
+        1->mealInfo.windowText
+        2->windowText
+        else->""
+    }
+    val buttonText = if(status!=0)R.string.changeText else R.string.whatToEatText
     val buttonHeight by animateDpAsState(
-        targetValue = if(change)750.dp else 500.dp ,
+        targetValue = if(status==0)500.dp else 750.dp ,
         animationSpec = tween(durationMillis = 1500, easing = LinearOutSlowInEasing),
         label = ""
     )
@@ -217,7 +202,7 @@ fun mainPage(modifier: Modifier = Modifier,
         ){
             Icon(Icons.Filled.DateRange, null)
         }
-        if (change){
+        if (status!=0){
             Text(
                 text = stringResource(R.string.beforeCanteenText),
                 //color = Color.Blue,
@@ -233,7 +218,7 @@ fun mainPage(modifier: Modifier = Modifier,
             )
         }
         Text(
-            text = stringResource(canteenText),
+            text = stringResource(canteenTextId),
             //color = Color.Blue,
             fontSize = 60.sp,
             textAlign= TextAlign.Center,
@@ -246,7 +231,7 @@ fun mainPage(modifier: Modifier = Modifier,
                 }
         )
         Text(
-            text = windowText,
+            text = windowTextDisplay,
             //color = Color.Blue,
             fontSize = 60.sp,
             textAlign= TextAlign.Center,
@@ -261,27 +246,10 @@ fun mainPage(modifier: Modifier = Modifier,
         Button(
             onClick =
             {
-                change=true
+                status=2
                 canteenNumber=randomCanteen()
                 windowText=randomWindow(canteenNumber)
-                var time = System.currentTimeMillis();
-                var mCalendar:Calendar = Calendar.getInstance();
-                mCalendar.setTimeInMillis(time);
-                var year = mCalendar.get(Calendar.YEAR)
-                var month = mCalendar.get(Calendar.MONTH)+1
-                var day = mCalendar.get(Calendar.DAY_OF_MONTH)
-                var apm = mCalendar.get(Calendar.AM_PM);
-                GlobalScope.launch(Dispatchers.IO) {
-                    val mealInfo = mealInfo()
-                    mealInfo.year = year
-                    mealInfo.month = month
-                    mealInfo.day = day
-                    mealInfo.mealNumber = apm
-                    mealInfo.canteenNumber = canteenNumber
-                    mealInfo.windowText = windowText
-                    mealInfo.result = 5
-                    mealInfoDatabase.getInstance(context).mealInfoDao().insert(mealInfo)}
-
+                insertDatabase(canteenNumber,windowText,context)
             },
             modifier= Modifier
                 .defaultMinSize()
@@ -298,10 +266,52 @@ fun mainPage(modifier: Modifier = Modifier,
         }
     }
 }
+
+fun queryMealInfo(context: Context): mealInfo= runBlocking{
+    val mCalendar= getCalendar()
+    var mealInfo=mealInfo()
+    val query = launch{
+            mealInfo=mealInfoDatabase.getInstance(context).mealInfoDao().get(mCalendar.get(Calendar.YEAR),mCalendar.get(Calendar.MONTH)+1,mCalendar.get(Calendar.DAY_OF_MONTH),mCalendar.get(Calendar.AM_PM))
+    }
+    query.join()
+    return@runBlocking mealInfo
+}
+
+fun getCalendar():Calendar{
+    val time = System.currentTimeMillis()
+    val mCalendar:Calendar = Calendar.getInstance()
+    mCalendar.setTimeInMillis(time)
+    return mCalendar
+}
+fun checkStatus(context: Context):Int= runBlocking{
+    val mCalendar= getCalendar()
+    var mealInfo: mealInfo
+    var flag=0
+    val query = launch{
+        try {
+        mealInfo=mealInfoDatabase.getInstance(context).mealInfoDao().get(mCalendar.get(Calendar.YEAR),mCalendar.get(Calendar.MONTH)+1,mCalendar.get(Calendar.DAY_OF_MONTH),mCalendar.get(Calendar.AM_PM))
+        if (mealInfo.result==0)flag=0 else flag=1
+        }catch(_:Exception){}
+    }
+    query.join()
+    return@runBlocking flag
+}
+fun insertDatabase(canteenNumber: Int, windowText: String,context: Context) {
+    val mCalendar= getCalendar()
+    GlobalScope.launch(Dispatchers.IO) {
+        val mealInfo = mealInfo()
+        mealInfo.year = mCalendar.get(Calendar.YEAR)
+        mealInfo.month = mCalendar.get(Calendar.MONTH)+1
+        mealInfo.day = mCalendar.get(Calendar.DAY_OF_MONTH)
+        mealInfo.mealNumber = mCalendar.get(Calendar.AM_PM)
+        mealInfo.canteenNumber = canteenNumber
+        mealInfo.windowText = windowText
+        mealInfo.result = 5
+        mealInfoDatabase.getInstance(context).mealInfoDao().insert(mealInfo)
+    }
+}
 @Composable
-fun settingPage(modifier: Modifier = Modifier,
-                navController: NavController
-){
+fun settingPage(modifier: Modifier = Modifier, navController: NavController, ){
     ConstraintLayout(
         Modifier.fillMaxWidth()
     ){
@@ -337,18 +347,17 @@ fun settingPage(modifier: Modifier = Modifier,
                     start.linkTo(parent.start, margin = 60.dp)
                 }
         ){
-
+        //TODO
         }
     }
 }
+
 @Composable
-fun historyPage(modifier: Modifier = Modifier,
-                navController: NavController
-){
+fun historyPage(modifier: Modifier = Modifier, navController: NavController, context: Context){
     ConstraintLayout(
         Modifier.fillMaxWidth()
     ){
-        val (button,text1,text2,text3,icon1) = createRefs()
+        val (text1,text2,icon1) = createRefs()
         var scrollState= rememberScrollState()
         IconButton(
             onClick = {
@@ -380,23 +389,64 @@ fun historyPage(modifier: Modifier = Modifier,
                     start.linkTo(parent.start, margin = 60.dp)
                 }
         ){
-
+            historyDisplayText(context)
         }
     }
+}
+@Composable
+fun historyDisplayText(context: Context){
+    var str by remember {
+        mutableStateOf(StringBuilder())
+    }
+    LaunchedEffect(null) {
+        var all=mealInfoDatabase.getInstance(context).mealInfoDao().getAll()
+        for (mealInfo in all){
+            str.append(mealInfo.year.toString()
+                    +context.getString(R.string.yearText)
+                    +mealInfo.month.toString()
+                    +context.getString(R.string.monthText)
+                    +mealInfo.day.toString()
+                    +context.getString(R.string.dayText)
+                    +context.getString(mealNumberToTextId(mealInfo.mealNumber))
+                    +context.getString(canteenNumberToCanteenTextId(mealInfo.canteenNumber))
+                    +mealInfo.windowText
+                    +"\n")
+        }
+    }
+    Text(
+        text = str.toString(),
+        fontSize = 30.sp,
+        lineHeight = 40.sp
+    )
+}
+fun mealNumberToTextId(mealNumber: Int): Int {
+    var result=when(mealNumber){
+        0->R.string.lunchText
+        1->R.string.dinnerText
+        else->R.string.nullText
+    }
+return result
 }
 fun randomCanteen(): Int {
     var result:Int
     result=(1..4).random()
     return result
 }
-
-
 fun randomWindow(canteenNumber:Int): String {
     var result:Int
     result=(1..20).random()
     return "第"+result+"窗口"
 }
-
+fun canteenNumberToCanteenTextId(canteenNumber: Int):Int {
+    val result=when(canteenNumber){
+        1->R.string.canteen1Text
+        2->R.string.canteen3Text
+        3->R.string.canteen4Text
+        4->R.string.canteen5Text
+        else->R.string.nullText
+    }
+    return result
+}
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {

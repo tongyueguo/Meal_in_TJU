@@ -12,6 +12,12 @@
     <string name="window2Text">窗口</string>
     <string name="settingText">设置</string>
     <string name="historyText">历史记录</string>
+    <string name="lunchText">午餐</string>
+    <string name="dinnerText">晚餐</string>
+    <string name="yearText">年</string>
+    <string name="monthText">月</string>
+    <string name="dayText">日</string>
+
 
 
 
