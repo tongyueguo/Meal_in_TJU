@@ -5,24 +5,32 @@ import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +39,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -149,6 +159,9 @@ fun MainView(context: Context){
         composable("analysePage"){
             analysePage(navController = navController, context = context)
         }
+        composable("editPage"){
+            editPage(navController = navController, context = context)
+        }
     }
 }
 @Composable
@@ -169,14 +182,14 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
     }
     val buttonText = if(status!=0)R.string.changeText else R.string.whatToEatText
     val buttonHeight by animateDpAsState(
-        targetValue = if(status==0)500.dp else 750.dp ,
-        animationSpec = tween(durationMillis = 1500, easing = LinearOutSlowInEasing),
+        targetValue = if(status==0)450.dp else 650.dp ,
+        animationSpec = tween(durationMillis = 1000, easing = LinearOutSlowInEasing),
         label = ""
     )
     ConstraintLayout(
         Modifier.fillMaxWidth()
     ){
-        val (button,text1,text2,text3,icon1,icon2) = createRefs()
+        val (button,text1,text2,text3,icon1,icon2,icon3) = createRefs()
         IconButton(
             onClick = {
                 navController.navigate("settingPage")
@@ -201,47 +214,65 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         ){
             Icon(Icons.Filled.DateRange, null)
         }
-        if (status!=0){
+        IconButton(
+            onClick =
+            {
+                navController.navigate("editPage")
+            },
+            modifier=Modifier
+                .constrainAs(icon3) {
+                    top.linkTo(parent.top, margin = 20.dp)
+                    end.linkTo(parent.end, margin = 100.dp)
+                }
+        ){
+            Icon(Icons.Filled.Edit, null)
+        }
+        AnimatedVisibility (status!=0,
+            modifier = Modifier
+                .constrainAs(text1) {
+                top.linkTo(parent.top, margin = 220.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ){
             Text(
                 text = stringResource(R.string.beforeCanteenText),
                 //color = Color.Blue,
                 fontSize = 30.sp,
                 textAlign= TextAlign.Center,
                 //fontFamily = FontFamily.Serif,
-                modifier=Modifier
-                    .constrainAs(text1) {
-                        top.linkTo(parent.top, margin = 220.dp)
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                    }
             )
         }
-        Text(
-            text = stringResource(canteenTextId),
-            //color = Color.Blue,
-            fontSize = 60.sp,
-            textAlign= TextAlign.Center,
-            //fontFamily = FontFamily.Serif,
-            modifier=Modifier
-                .constrainAs(text2) {
-                    top.linkTo(parent.top, margin = 300.dp)
-                    start.linkTo(parent.start)
-                    end.linkTo(parent.end)
-                }
-        )
-        Text(
-            text = windowTextDisplay,
-            //color = Color.Blue,
-            fontSize = 60.sp,
-            textAlign= TextAlign.Center,
-            //fontFamily = FontFamily.Serif,
-            modifier=Modifier
-                .constrainAs(text3) {
-                    top.linkTo(parent.top, margin = 400.dp)
-                    start.linkTo(parent.start)
-                    end.linkTo(parent.end)
-                }
-        )//TODO 手动输入
+        AnimatedVisibility (status!=0,
+            modifier = Modifier.constrainAs(text2) {
+                top.linkTo(parent.top, margin = 300.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ){
+            Text(
+                text = stringResource(canteenTextId),
+                //color = Color.Blue,
+                fontSize = 60.sp,
+                textAlign= TextAlign.Center,
+                //fontFamily = FontFamily.Serif,
+            )
+        }
+        AnimatedVisibility (status!=0,
+            modifier = Modifier.constrainAs(text3) {
+                top.linkTo(parent.top, margin = 400.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ){
+            Text(
+                text = windowTextDisplay,
+                //color = Color.Blue,
+                fontSize = 60.sp,
+                textAlign= TextAlign.Center,
+                //fontFamily = FontFamily.Serif,
+            )
+        }
         Button(
             onClick =
             {
@@ -270,7 +301,7 @@ fun queryMealInfo(context: Context): mealInfo= runBlocking{
     val mCalendar= getCalendar()
     var mealInfo=mealInfo()
     val query = launch{
-            mealInfo=mealInfoDatabase.getDatabase(context).mealInfoDao().get(mCalendar.get(Calendar.YEAR),mCalendar.get(Calendar.MONTH)+1,mCalendar.get(Calendar.DAY_OF_MONTH),mCalendar.get(Calendar.AM_PM))
+        mealInfo=mealInfoDatabase.getDatabase(context).mealInfoDao().get(mCalendar.get(Calendar.YEAR),mCalendar.get(Calendar.MONTH)+1,mCalendar.get(Calendar.DAY_OF_MONTH),mCalendar.get(Calendar.AM_PM))
     }
     query.join()
     return@runBlocking mealInfo
@@ -282,6 +313,14 @@ fun getCalendar():Calendar{
     mCalendar.setTimeInMillis(time)
     return mCalendar
 }
+fun setTime(mealInfo: mealInfo):mealInfo{
+    val mCalendar= getCalendar()
+    mealInfo.year = mCalendar.get(Calendar.YEAR)
+    mealInfo.month = mCalendar.get(Calendar.MONTH)+1
+    mealInfo.day = mCalendar.get(Calendar.DAY_OF_MONTH)
+    mealInfo.mealNumber = mCalendar.get(Calendar.AM_PM)
+    return mealInfo
+}
 fun checkStatus(context: Context):Int= runBlocking{
     val mCalendar= getCalendar()
     var mealInfo: mealInfo
@@ -289,15 +328,15 @@ fun checkStatus(context: Context):Int= runBlocking{
     val query = launch{
         try {
             mealInfo=mealInfoDatabase.getDatabase(context).mealInfoDao().get(mCalendar.get(Calendar.YEAR),mCalendar.get(Calendar.MONTH)+1,mCalendar.get(Calendar.DAY_OF_MONTH),mCalendar.get(Calendar.AM_PM))
-        if (mealInfo.result==0)flag=0 else flag=1
+            if (mealInfo.result==0)flag=0 else flag=1
         }catch(_:Exception){}
     }
     query.join()
     return@runBlocking flag
 }
-fun insertDatabase(canteenNumber: Int, windowText: String,context: Context) {
+fun insertDatabase(canteenNumber: Int, windowText: String,context: Context)=runBlocking{
     val mCalendar= getCalendar()
-    GlobalScope.launch(Dispatchers.IO) {
+    val insert = launch{
         val mealInfo = mealInfo()
         mealInfo.year = mCalendar.get(Calendar.YEAR)
         mealInfo.month = mCalendar.get(Calendar.MONTH)+1
@@ -308,6 +347,7 @@ fun insertDatabase(canteenNumber: Int, windowText: String,context: Context) {
         mealInfo.result = 5
         mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo)
     }
+    insert.join()
 }
 @Composable
 fun settingPage(modifier: Modifier = Modifier, navController: NavController, ){
@@ -348,11 +388,10 @@ fun settingPage(modifier: Modifier = Modifier, navController: NavController, ){
         ){
             Text(text = "Meal In TJU")
             Text(text = "© 2023 TongyueGuo")
-        //TODO 设置界面等
+            //TODO 设置界面等
         }
     }
 }
-
 @Composable
 fun historyPage(modifier: Modifier = Modifier, navController: NavController, context: Context){
     ConstraintLayout(
@@ -438,7 +477,7 @@ fun analysePage(navController: NavController,context: Context){
         Modifier.fillMaxWidth()
     ){
         val (text1,text2,icon1,icon2) = createRefs()
-        var scrollState= rememberScrollState()//TODO 分析历史记录等
+        var scrollState= rememberScrollState()
         IconButton(
             onClick = {
                 navController.navigate("historyPage")
@@ -469,19 +508,87 @@ fun analysePage(navController: NavController,context: Context){
                     start.linkTo(parent.start, margin = 60.dp)
                 }
         ){
+            //TODO 分析历史记录等
         }
     }
-
-
 }
-
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun editPage(modifier: Modifier = Modifier, navController: NavController, context: Context){
+    var textCanteen by remember { mutableStateOf("") }
+    var textWindow by remember { mutableStateOf("") }
+    ConstraintLayout(
+        Modifier.fillMaxWidth()
+    ){
+        val (text1,text2,text3,icon1,button) = createRefs()
+        IconButton(
+            onClick = {
+                navController.navigate("mainPage")
+            },
+            modifier=Modifier
+                .constrainAs(icon1) {
+                    top.linkTo(parent.top, margin = 20.dp)
+                    start.linkTo(parent.start,margin=20.dp)
+                }
+        ){
+            Icon(Icons.Filled.ArrowBack, null)
+        }
+        Text(
+            text = stringResource(R.string.editText),
+            fontSize = 30.sp,
+            modifier=Modifier
+                .constrainAs(text1) {
+                    top.linkTo(parent.top, margin = 23.dp)
+                    start.linkTo(parent.start,margin = 60.dp)
+                }
+        )
+        OutlinedTextField(
+            value = textCanteen,
+            onValueChange = { textCanteen = it },
+            label = { Text("食堂名称") },
+            modifier=Modifier
+                .constrainAs(text2) {
+                    top.linkTo(parent.top, margin = 150.dp)
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                }
+        )//TODO 改进输入方式
+        OutlinedTextField(
+            value = textWindow,
+            onValueChange = { textWindow = it },
+            label = { Text("窗口名称") },
+            modifier=Modifier
+                .constrainAs(text3) {
+                    top.linkTo(parent.top, margin = 225.dp)
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                }
+        )
+        Button(
+            onClick = {
+                insertDatabase(textCanteen.toInt(),"第"+textWindow+"窗口",context)
+            },
+            modifier=Modifier
+                .constrainAs(button) {
+                    top.linkTo(parent.top, margin = 350.dp)
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                }
+        ){
+            Text(
+                text = stringResource(R.string.confirmText),
+                fontSize = 30.sp
+            )
+        }
+    }
+}
 fun mealNumberToTextId(mealNumber: Int): Int {
     var result=when(mealNumber){
         0->R.string.lunchText
         1->R.string.dinnerText
         else->R.string.nullText
     }
-return result
+    return result
 }
 fun randomCanteen(): Int {
     var result:Int
@@ -508,6 +615,6 @@ fun canteenNumberToCanteenTextId(canteenNumber: Int):Int {
 fun GreetingPreview() {
     MealInTJUTheme {
         val navController= rememberNavController()
-       // mainPage(navController = navController)
+        // mainPage(navController = navController)
     }
 }
