@@ -2,7 +2,9 @@ package com.example.mealintju
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.media.Rating
 import android.os.Bundle
+import android.widget.RatingBar
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
@@ -11,6 +13,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +26,9 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.twotone.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -42,7 +48,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -66,6 +74,7 @@ import androidx.room.Update
 import com.example.mealintju.ui.theme.MealInTJUTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.util.Calendar
@@ -105,7 +114,7 @@ data class mealInfo(
     @ColumnInfo(name = "windowText")
     var windowText: String = "" ,
     @ColumnInfo(name = "result")
-    var result: Int? = 0
+    var result: Int = -1//Int?=0
 )
 @Dao
 interface mealInfoDao {
@@ -186,10 +195,13 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         animationSpec = tween(durationMillis = 1000, easing = LinearOutSlowInEasing),
         label = ""
     )
+    var result by remember {
+        mutableStateOf(if (status==1)mealInfo.result else 5)
+    }
     ConstraintLayout(
         Modifier.fillMaxWidth()
     ){
-        val (button,text1,text2,text3,icon1,icon2,icon3) = createRefs()
+        val (button,text1,text2,text3,icon1,icon2,icon3,ratingBar) = createRefs()
         IconButton(
             onClick = {
                 navController.navigate("settingPage")
@@ -273,6 +285,21 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
                 //fontFamily = FontFamily.Serif,
             )
         }
+        AnimatedVisibility (status!=0,
+            modifier = Modifier.constrainAs(ratingBar) {
+                top.linkTo(parent.top, margin = 530.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ){
+            Row {
+                Icon(if (result-1 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier.clickable { result=1;updateResult(result,context) } , tint =MaterialTheme.colorScheme.primary )
+                Icon(if (result-2 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier.clickable { result=2;updateResult(result,context) } , tint =MaterialTheme.colorScheme.primary )
+                Icon(if (result-3 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier.clickable { result=3;updateResult(result,context) } , tint =MaterialTheme.colorScheme.primary )
+                Icon(if (result-4 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier.clickable { result=4;updateResult(result,context) } , tint =MaterialTheme.colorScheme.primary )
+                Icon(if (result-5 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier.clickable { result=5;updateResult(result,context) } , tint =MaterialTheme.colorScheme.primary )
+            }
+        }
         Button(
             onClick =
             {
@@ -313,6 +340,13 @@ fun getCalendar():Calendar{
     mCalendar.setTimeInMillis(time)
     return mCalendar
 }
+fun updateResult(result: Int,context: Context)= runBlocking{
+    var mealInfo= queryMealInfo(context)
+    mealInfo.result=result
+    val job = launch {mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo)}
+    job.join()
+    return@runBlocking
+}
 fun setTime(mealInfo: mealInfo):mealInfo{
     val mCalendar= getCalendar()
     mealInfo.year = mCalendar.get(Calendar.YEAR)
@@ -328,7 +362,7 @@ fun checkStatus(context: Context):Int= runBlocking{
     val query = launch{
         try {
             mealInfo=mealInfoDatabase.getDatabase(context).mealInfoDao().get(mCalendar.get(Calendar.YEAR),mCalendar.get(Calendar.MONTH)+1,mCalendar.get(Calendar.DAY_OF_MONTH),mCalendar.get(Calendar.AM_PM))
-            if (mealInfo.result==0)flag=0 else flag=1
+            if (mealInfo.result==-1)flag=0 else flag=1
         }catch(_:Exception){}
     }
     query.join()
@@ -344,7 +378,7 @@ fun insertDatabase(canteenNumber: Int, windowText: String,context: Context)=runB
         mealInfo.mealNumber = mCalendar.get(Calendar.AM_PM)
         mealInfo.canteenNumber = canteenNumber
         mealInfo.windowText = windowText
-        mealInfo.result = 5
+        mealInfo.result = 0
         mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo)
     }
     insert.join()
@@ -447,7 +481,7 @@ fun historyPage(modifier: Modifier = Modifier, navController: NavController, con
 }
 @Composable
 fun historyDisplayText(context: Context){
-    var str by remember {
+    /*var str by remember {
         mutableStateOf(StringBuilder())
     }
     LaunchedEffect(null) {
@@ -464,12 +498,69 @@ fun historyDisplayText(context: Context){
                     +mealInfo.windowText
                     +"\n")
         }
+    }*/
+    var all:List<mealInfo> = remember {
+        getHistoryList(context)
     }
-    Text(
-        text = str.toString(),
-        fontSize = 30.sp,
-        lineHeight = 40.sp
-    )
+    var timeText=StringBuilder()
+    var canteenText=StringBuilder()
+    var mealNumberText=StringBuilder()
+    var windowText=StringBuilder()
+    var resultText=StringBuilder()
+    for(mealInfo in all){
+        timeText.append(mealInfo.year.toString() +"."+mealInfo.month.toString()+"."+mealInfo.day.toString()+"\n")
+        canteenText.append(context.getString(canteenNumberToCanteenTextId(mealInfo.canteenNumber))+"\n")
+        mealNumberText.append(context.getString(mealNumberToTextId(mealInfo.mealNumber))+"\n")
+        windowText.append(mealInfo.windowText+"\n")
+        resultText.append(if(mealInfo.result!=0)mealInfo.result.toString()+"\n" else context.getString(R.string.noResultText)+"\n")
+    }
+    Row {
+        Text(
+            text = timeText.toString(),
+            fontSize = 25.sp,
+            //fontFamily = FontFamily.Default,
+            lineHeight = 40.sp,
+            color = MaterialTheme.colorScheme.primary,
+            //modifier = Modifier.padding(20.dp)
+        )
+        Text(
+            text = mealNumberText.toString(),
+            fontSize = 25.sp,
+            //fontFamily = FontFamily.Monospace,
+            lineHeight = 40.sp,
+            modifier = Modifier.padding(start = 20.dp,top=0.dp,end=0.dp,bottom=0.dp)
+        )
+        Text(
+            text = canteenText.toString(),
+            fontSize = 25.sp,
+            //fontFamily = FontFamily.Monospace,
+            lineHeight = 40.sp,
+            modifier = Modifier.padding(start = 20.dp,top=0.dp,end=0.dp,bottom=0.dp)
+        )
+        Text(
+            text = windowText.toString(),
+            fontSize = 25.sp,
+            //fontFamily = FontFamily.Monospace,
+            lineHeight = 40.sp,
+            modifier = Modifier.padding(start = 20.dp,top=0.dp,end=0.dp,bottom=0.dp)
+        )
+        Text(
+            text = resultText.toString(),
+            fontSize = 25.sp,
+            //fontFamily = FontFamily.Monospace,
+            lineHeight = 40.sp,
+            modifier = Modifier.padding(start = 20.dp,top=0.dp,end=0.dp,bottom=0.dp)
+        )
+    }
+}
+fun getHistoryList(context: Context):List<mealInfo> = runBlocking {
+    var temp=mealInfo()
+    var all: List<mealInfo> = mutableListOf(temp)
+    val job=launch{
+        all=mealInfoDatabase.getDatabase(context).mealInfoDao().getAll()
+    }
+    job.join()
+    return@runBlocking all
 }
 @Composable
 fun analysePage(navController: NavController,context: Context){
