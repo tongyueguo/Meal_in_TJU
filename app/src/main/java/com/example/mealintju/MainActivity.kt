@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
@@ -54,6 +55,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.navigation.NavController
@@ -160,7 +162,7 @@ fun MainView(context: Context){
             mainPage(navController = navController, context = context)
         }
         composable("settingPage"){
-            settingPage(navController = navController)
+            settingPage(navController = navController, context = context)
         }
         composable("historyPage"){
             historyPage(navController = navController, context = context)
@@ -175,20 +177,12 @@ fun MainView(context: Context){
 }
 @Composable
 fun mainPage(modifier: Modifier = Modifier, navController: NavController, context: Context) {
+    //writeFile(context,"")
     var status by remember {mutableStateOf(checkStatus(context))}//0:无记录  1:已有记录从数据库读  2:已有记录不从数据库读数据
-    var canteenNumber by remember { mutableStateOf(0) }
     val mealInfo= queryMealInfo(context)
-    val canteenTextId=when(status){
-        1->canteenNumberToCanteenTextId(mealInfo.canteenNumber)
-        2->canteenNumberToCanteenTextId(canteenNumber)
-        else->R.string.nullText
-    }
-    var windowText by remember { mutableStateOf("") }
-    val windowTextDisplay:String =when(status){
-        1->mealInfo.windowText
-        2->windowText
-        else->""
-    }
+    var canteenNumber by remember { mutableStateOf(if (status==1)mealInfo.canteenNumber else 0) }
+    val canteenTextId=canteenNumberToCanteenTextId(canteenNumber)
+    var windowText by remember { mutableStateOf(if (status==1)mealInfo.windowText else "第1窗口") }
     val buttonText = if(status!=0)R.string.changeText else R.string.whatToEatText
     val buttonHeight by animateDpAsState(
         targetValue = if(status==0)450.dp else 650.dp ,
@@ -201,7 +195,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
     ConstraintLayout(
         Modifier.fillMaxWidth()
     ){
-        val (button,text1,text2,text3,icon1,icon2,icon3,ratingBar) = createRefs()
+        val (button,text1,text2,text3,text4,icon1,icon2,icon3,ratingBar) = createRefs()
         IconButton(
             onClick = {
                 navController.navigate("settingPage")
@@ -242,7 +236,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         AnimatedVisibility (status!=0,
             modifier = Modifier
                 .constrainAs(text1) {
-                top.linkTo(parent.top, margin = 220.dp)
+                top.linkTo(parent.top, margin = 210.dp)
                 start.linkTo(parent.start)
                 end.linkTo(parent.end)
             }
@@ -257,7 +251,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         }
         AnimatedVisibility (status!=0,
             modifier = Modifier.constrainAs(text2) {
-                top.linkTo(parent.top, margin = 300.dp)
+                top.linkTo(parent.top, margin = 280.dp)
                 start.linkTo(parent.start)
                 end.linkTo(parent.end)
             }
@@ -272,13 +266,13 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         }
         AnimatedVisibility (status!=0,
             modifier = Modifier.constrainAs(text3) {
-                top.linkTo(parent.top, margin = 400.dp)
+                top.linkTo(parent.top, margin = 370.dp)
                 start.linkTo(parent.start)
                 end.linkTo(parent.end)
             }
         ){
             Text(
-                text = windowTextDisplay,
+                text = windowText,
                 //color = Color.Blue,
                 fontSize = 60.sp,
                 textAlign= TextAlign.Center,
@@ -287,7 +281,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         }
         AnimatedVisibility (status!=0,
             modifier = Modifier.constrainAs(ratingBar) {
-                top.linkTo(parent.top, margin = 530.dp)
+                top.linkTo(parent.top, margin = 550.dp)
                 start.linkTo(parent.start)
                 end.linkTo(parent.end)
             }
@@ -299,6 +293,21 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
                 Icon(if (result-4 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier.clickable { result=4;updateResult(result,context) } , tint =MaterialTheme.colorScheme.primary )
                 Icon(if (result-5 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier.clickable { result=5;updateResult(result,context) } , tint =MaterialTheme.colorScheme.primary )
             }
+        }
+        AnimatedVisibility (status!=0,
+            modifier = Modifier.constrainAs(text4) {
+                top.linkTo(parent.top, margin = 460.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ){
+            Text(
+                text = readFile(context,windowText,canteenNumber),
+                //color = Color.Blue,
+                fontSize = 60.sp,
+                textAlign= TextAlign.Center,
+                //fontFamily = FontFamily.Serif,
+            )
         }
         Button(
             onClick =
@@ -383,12 +392,14 @@ fun insertDatabase(canteenNumber: Int, windowText: String,context: Context)=runB
     }
     insert.join()
 }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun settingPage(modifier: Modifier = Modifier, navController: NavController, ){
+fun settingPage(modifier: Modifier = Modifier, navController: NavController,context:Context ){
     ConstraintLayout(
         Modifier.fillMaxWidth()
     ){
         val (button,text1,text2,text3,icon1) = createRefs()
+        var text by remember{ mutableStateOf("")}
         var scrollState= rememberScrollState()
         IconButton(
             onClick = {
@@ -411,12 +422,47 @@ fun settingPage(modifier: Modifier = Modifier, navController: NavController, ){
                     start.linkTo(parent.start,margin = 60.dp)
                 }
         )
+        OutlinedTextField(
+            value = text,
+            onValueChange = { text = it },
+            label = { Text("字符串") },
+            modifier=Modifier
+                .constrainAs(text2) {
+                    top.linkTo(parent.top, margin = 150.dp)
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                },
+            trailingIcon = { IconButton(onClick = {text=""}) {
+                Icon(Icons.Filled.Clear,"")
+            }},
+            maxLines = 3,
+
+        )
+        Button(
+            onClick = {
+                writeFile(context = context,text)
+            },
+            modifier=Modifier
+                .constrainAs(button) {
+                    top.linkTo(parent.top, margin = 350.dp)
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                }
+        ){
+            Text(
+                text = stringResource(R.string.confirmText),
+                fontSize = 30.sp
+            )
+        }
+
+
+
         Column (
             modifier= Modifier
                 .verticalScroll(scrollState)
                 .fillMaxSize()
-                .constrainAs(text2) {
-                    top.linkTo(parent.top, margin = 80.dp)
+                .constrainAs(text3) {
+                    top.linkTo(parent.top, margin = 800.dp)
                     start.linkTo(parent.start, margin = 60.dp)
                 }
         ){
@@ -700,6 +746,22 @@ fun canteenNumberToCanteenTextId(canteenNumber: Int):Int {
         else->R.string.nullText
     }
     return result
+}
+fun writeFile(context: Context,str:String){
+    context.openFileOutput("mealData",Context.MODE_PRIVATE).use {
+        it.write(str.toByteArray())
+    }
+}
+fun readFile(context: Context,windowText: String,canteenNumber: Int):String{
+    var str=StringBuilder()
+    try {
+        var windowNumber=windowText.filter { it.isDigit() }.toInt()
+        context.openFileInput("mealData").bufferedReader().forEachLine {
+            if (it.filter { it.isDigit() }.toInt()==canteenNumber*100+windowNumber)
+                str.append(it.substring(3))
+        }
+    }catch (e:Exception){}
+    return str.toString()
 }
 @Preview(showBackground = true)
 @Composable
