@@ -432,12 +432,12 @@ fun settingPage(modifier: Modifier = Modifier, navController: NavController,cont
                     start.linkTo(parent.start)
                     end.linkTo(parent.end)
                 },
-            trailingIcon = { IconButton(onClick = {text=""}) {
+            trailingIcon = {
+                IconButton(onClick = {text=""}) {
                 Icon(Icons.Filled.Clear,"")
-            }},
-            maxLines = 3,
-
-        )
+                }
+            },
+            maxLines = 3)
         Button(
             onClick = {
                 writeFile(context = context,text)
@@ -454,9 +454,6 @@ fun settingPage(modifier: Modifier = Modifier, navController: NavController,cont
                 fontSize = 30.sp
             )
         }
-
-
-
         Column (
             modifier= Modifier
                 .verticalScroll(scrollState)
@@ -553,17 +550,19 @@ fun historyDisplayText(context: Context){
     var mealNumberText=StringBuilder()
     var windowText=StringBuilder()
     var resultText=StringBuilder()
+    var windowDetailText=StringBuilder()
     for(mealInfo in all){
         timeText.append(mealInfo.year.toString() +"."+mealInfo.month.toString()+"."+mealInfo.day.toString()+"\n")
         canteenText.append(context.getString(canteenNumberToCanteenTextId(mealInfo.canteenNumber))+"\n")
         mealNumberText.append(context.getString(mealNumberToTextId(mealInfo.mealNumber))+"\n")
         windowText.append(mealInfo.windowText+"\n")
+        windowDetailText.append(readFile(context,mealInfo.windowText,mealInfo.canteenNumber)+"\n")
         resultText.append(if(mealInfo.result!=0)mealInfo.result.toString()+"\n" else context.getString(R.string.noResultText)+"\n")
     }
     Row {
         Text(
             text = timeText.toString(),
-            fontSize = 25.sp,
+            fontSize = 20.sp,
             //fontFamily = FontFamily.Default,
             lineHeight = 40.sp,
             color = MaterialTheme.colorScheme.primary,
@@ -571,31 +570,38 @@ fun historyDisplayText(context: Context){
         )
         Text(
             text = mealNumberText.toString(),
-            fontSize = 25.sp,
+            fontSize = 20.sp,
             //fontFamily = FontFamily.Monospace,
             lineHeight = 40.sp,
             modifier = Modifier.padding(start = 20.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
             text = canteenText.toString(),
-            fontSize = 25.sp,
+            fontSize = 20.sp,
             //fontFamily = FontFamily.Monospace,
             lineHeight = 40.sp,
-            modifier = Modifier.padding(start = 20.dp,top=0.dp,end=0.dp,bottom=0.dp)
+            modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
             text = windowText.toString(),
-            fontSize = 25.sp,
+            fontSize = 20.sp,
             //fontFamily = FontFamily.Monospace,
             lineHeight = 40.sp,
-            modifier = Modifier.padding(start = 20.dp,top=0.dp,end=0.dp,bottom=0.dp)
+            modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
+        )
+        Text(
+                text = windowDetailText.toString(),
+        fontSize = 20.sp,
+        //fontFamily = FontFamily.Monospace,
+        lineHeight = 40.sp,
+        modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
             text = resultText.toString(),
-            fontSize = 25.sp,
+            fontSize = 20.sp,
             //fontFamily = FontFamily.Monospace,
             lineHeight = 40.sp,
-            modifier = Modifier.padding(start = 20.dp,top=0.dp,end=0.dp,bottom=0.dp)
+            modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
     }
 }
