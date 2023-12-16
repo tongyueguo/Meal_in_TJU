@@ -170,7 +170,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
     val mealInfo= queryMealInfo(context)
     var canteenNumber by remember { mutableStateOf(if (status==1)mealInfo.canteenNumber else 0) }
     val canteenTextId=canteenNumberToCanteenTextId(canteenNumber)
-    var windowText by remember { mutableStateOf(if (status==1)mealInfo.windowText else "第1窗口") }
+    var windowText by remember { mutableStateOf(if (status==1)mealInfo.windowText else context.getString(R.string.window1Text)+"1"+context.getString(R.string.window2Text)) }
     val buttonText = if(status!=0)R.string.changeText else R.string.whatToEatText
     val buttonHeight by animateDpAsState(
         targetValue = if(status==0)450.dp else 650.dp ,
@@ -302,7 +302,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
             {
                 status=2
                 canteenNumber=randomCanteen()
-                windowText=randomWindow(canteenNumber)
+                windowText=randomWindow(canteenNumber, context = context)
                 insertDatabase(canteenNumber,windowText,context)
             },
             modifier= Modifier
@@ -551,45 +551,45 @@ fun historyDisplayText(context: Context){
     Row {
         Text(
             text = timeText.toString(),
-            fontSize = 20.sp,
+            fontSize = 18.sp,
             //fontFamily = FontFamily.Default,
-            lineHeight = 40.sp,
+            lineHeight = 30.sp,
             color = MaterialTheme.colorScheme.primary,
             //modifier = Modifier.padding(20.dp)
         )
         Text(
             text = mealNumberText.toString(),
-            fontSize = 20.sp,
+            fontSize = 18.sp,
             //fontFamily = FontFamily.Monospace,
-            lineHeight = 40.sp,
+            lineHeight = 30.sp,
             modifier = Modifier.padding(start = 20.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
             text = canteenText.toString(),
-            fontSize = 20.sp,
+            fontSize = 18.sp,
             //fontFamily = FontFamily.Monospace,
-            lineHeight = 40.sp,
+            lineHeight = 30.sp,
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
             text = windowText.toString(),
-            fontSize = 20.sp,
+            fontSize = 18.sp,
             //fontFamily = FontFamily.Monospace,
-            lineHeight = 40.sp,
+            lineHeight = 30.sp,
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
             text = windowDetailText.toString(),
-            fontSize = 20.sp,
+            fontSize = 18.sp,
             //fontFamily = FontFamily.Monospace,
-            lineHeight = 40.sp,
+            lineHeight = 30.sp,
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
             text = resultText.toString(),
-            fontSize = 20.sp,
+            fontSize = 18.sp,
             //fontFamily = FontFamily.Monospace,
-            lineHeight = 40.sp,
+            lineHeight = 30.sp,
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
     }
@@ -670,12 +670,12 @@ fun analyseDisplayText(context: Context){
     }
     for (i in 1 until maxCanteenNumber+1){
         canteenText.append(context.getString(canteenNumberToCanteenTextId(i))+"\n")
-        windowText.append(windowNumberToWindowText(1)+"\n")
-        windowDetailText.append(readMealData(context,windowNumberToWindowText(1),i)+"\n")
+        windowText.append(windowNumberToWindowText(1,context)+"\n")
+        windowDetailText.append(readMealData(context,windowNumberToWindowText(1,context),i)+"\n")
         for (j in 1 until maxWindowNumber[i-1]){
             canteenText.append("\n")
-            windowText.append(windowNumberToWindowText(j+1)+"\n")
-            windowDetailText.append(readMealData(context,windowNumberToWindowText(j+1),i)+"\n")
+            windowText.append(windowNumberToWindowText(j+1,context)+"\n")
+            windowDetailText.append(readMealData(context,windowNumberToWindowText(j+1,context),i)+"\n")
         }
     }
     for (i in 0 until totalNumber){
@@ -755,7 +755,7 @@ fun editPage(modifier: Modifier = Modifier, navController: NavController, contex
         OutlinedTextField(
             value = canteenText,
             onValueChange = { canteenText = it },
-            label = { Text("食堂名称") },
+            label = { Text(stringResource(R.string.canteenText)) },
             modifier=Modifier
                 .constrainAs(text2) {
                     top.linkTo(parent.top, margin = 150.dp)
@@ -766,7 +766,7 @@ fun editPage(modifier: Modifier = Modifier, navController: NavController, contex
         OutlinedTextField(
             value = windowText,
             onValueChange = { windowText = it },
-            label = { Text("窗口名称") },
+            label = { Text(stringResource(R.string.windowText)) },
             modifier=Modifier
                 .constrainAs(text3) {
                     top.linkTo(parent.top, margin = 225.dp)
@@ -805,10 +805,10 @@ fun randomCanteen(): Int {
     result=(1..maxCanteenNumber).random()
     return result
 }
-fun randomWindow(canteenNumber:Int): String {
+fun randomWindow(canteenNumber:Int,context: Context): String {
     val result:Int
     result=(1..20).random()
-    return windowNumberToWindowText(result)
+    return windowNumberToWindowText(result,context)
 }//TODO 窗口更新
 fun canteenNumberToCanteenTextId(canteenNumber: Int):Int {
     val result=when(canteenNumber){
@@ -842,8 +842,8 @@ fun readMealData(context: Context, windowText: String, canteenNumber: Int):Strin
 fun windowTextToWindowNumber(windowText: String):Int{
     return windowText.filter { it.isDigit() }.toInt()
 }
-fun windowNumberToWindowText(windowNumber: Int):String{
-    return "第"+windowNumber.toString()+"窗口"
+fun windowNumberToWindowText(windowNumber: Int,context: Context):String{
+    return context.getString(R.string.window1Text)+windowNumber.toString()+context.getString(R.string.window2Text)
 }
 
 @Preview(showBackground = true)
