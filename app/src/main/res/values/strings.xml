@@ -2,10 +2,13 @@
     <string name="app_name">Meal in TJU</string>
     <string name="whatToEatText">吃什么</string>
     <string name="changeText">换一个</string>
-    <string name="canteen1Text">学一食堂</string>
-    <string name="canteen3Text">学三食堂</string>
-    <string name="canteen4Text">学四食堂</string>
-    <string name="canteen5Text">学五食堂</string>
+    <string name="canteen1floor1Text">学一食堂一楼</string>
+    <string name="canteen1floor2Text">学一食堂二楼</string>
+    <string name="canteen3floor1Text">学三食堂一楼</string>
+    <string name="canteen4floor1Text">学四食堂一楼</string>
+    <string name="canteen4floor2Text">学四食堂二楼</string>
+    <string name="canteen5floor2Text">学五食堂二楼</string>
+    <string name="canteen5floor3Text">学五食堂三楼</string>
     <string name="beforeCanteenText">吃</string>
     <string name="nullText"></string>
     <string name="window1Text">第</string>

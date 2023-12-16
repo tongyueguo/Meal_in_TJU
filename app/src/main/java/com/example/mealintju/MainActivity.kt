@@ -2,9 +2,7 @@ package com.example.mealintju
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.media.Rating
 import android.os.Bundle
-import android.widget.RatingBar
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
@@ -28,11 +26,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.twotone.Star
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,21 +36,15 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.navigation.NavController
@@ -74,13 +63,12 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Update
 import com.example.mealintju.ui.theme.MealInTJUTheme
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.util.Calendar
 
+const val maxCanteenNumber=7
+val maxWindowNumber= arrayOf(20,20,20,20,20,20,20)
 
 class MainActivity : ComponentActivity() {
     @SuppressLint("CoroutineCreationDuringComposition")
@@ -190,7 +178,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         label = ""
     )
     var result by remember {
-        mutableStateOf(if (status==1)mealInfo.result else 5)
+        mutableStateOf(if (status==1)mealInfo.result else 0)
     }
     ConstraintLayout(
         Modifier.fillMaxWidth()
@@ -281,7 +269,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         }
         AnimatedVisibility (status!=0,
             modifier = Modifier.constrainAs(ratingBar) {
-                top.linkTo(parent.top, margin = 550.dp)
+                top.linkTo(parent.top, margin = 575.dp)
                 start.linkTo(parent.start)
                 end.linkTo(parent.end)
             }
@@ -302,7 +290,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
             }
         ){
             Text(
-                text = readFile(context,windowText,canteenNumber),
+                text = readMealData(context,windowText,canteenNumber),
                 //color = Color.Blue,
                 fontSize = 60.sp,
                 textAlign= TextAlign.Center,
@@ -440,7 +428,7 @@ fun settingPage(modifier: Modifier = Modifier, navController: NavController,cont
             maxLines = 3)
         Button(
             onClick = {
-                writeFile(context = context,text)
+                writeMealData(context = context,text)
             },
             modifier=Modifier
                 .constrainAs(button) {
@@ -475,7 +463,7 @@ fun historyPage(modifier: Modifier = Modifier, navController: NavController, con
         Modifier.fillMaxWidth()
     ){
         val (text1,text2,icon1,icon2) = createRefs()
-        var scrollState= rememberScrollState()//TODO 分析历史记录等
+        var scrollState= rememberScrollState()
         IconButton(
             onClick = {
                 navController.navigate("mainPage")
@@ -542,23 +530,24 @@ fun historyDisplayText(context: Context){
                     +"\n")
         }
     }*/
-    var all:List<mealInfo> = remember {
+    val all:List<mealInfo> = remember {
         getHistoryList(context)
     }
-    var timeText=StringBuilder()
-    var canteenText=StringBuilder()
-    var mealNumberText=StringBuilder()
-    var windowText=StringBuilder()
-    var resultText=StringBuilder()
-    var windowDetailText=StringBuilder()
+    val timeText=StringBuilder()
+    val canteenText=StringBuilder()
+    val mealNumberText=StringBuilder()
+    val windowText=StringBuilder()
+    val resultText=StringBuilder()
+    val windowDetailText=StringBuilder()
     for(mealInfo in all){
         timeText.append(mealInfo.year.toString() +"."+mealInfo.month.toString()+"."+mealInfo.day.toString()+"\n")
         canteenText.append(context.getString(canteenNumberToCanteenTextId(mealInfo.canteenNumber))+"\n")
         mealNumberText.append(context.getString(mealNumberToTextId(mealInfo.mealNumber))+"\n")
         windowText.append(mealInfo.windowText+"\n")
-        windowDetailText.append(readFile(context,mealInfo.windowText,mealInfo.canteenNumber)+"\n")
+        windowDetailText.append(readMealData(context,mealInfo.windowText,mealInfo.canteenNumber)+"\n")
         resultText.append(if(mealInfo.result!=0)mealInfo.result.toString()+"\n" else context.getString(R.string.noResultText)+"\n")
     }
+    canteenText.append("\n".repeat(2))
     Row {
         Text(
             text = timeText.toString(),
@@ -590,11 +579,11 @@ fun historyDisplayText(context: Context){
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
-                text = windowDetailText.toString(),
-        fontSize = 20.sp,
-        //fontFamily = FontFamily.Monospace,
-        lineHeight = 40.sp,
-        modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
+            text = windowDetailText.toString(),
+            fontSize = 20.sp,
+            //fontFamily = FontFamily.Monospace,
+            lineHeight = 40.sp,
+            modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
             text = resultText.toString(),
@@ -606,7 +595,7 @@ fun historyDisplayText(context: Context){
     }
 }
 fun getHistoryList(context: Context):List<mealInfo> = runBlocking {
-    var temp=mealInfo()
+    val temp=mealInfo()
     var all: List<mealInfo> = mutableListOf(temp)
     val job=launch{
         all=mealInfoDatabase.getDatabase(context).mealInfoDao().getAll()
@@ -651,15 +640,93 @@ fun analysePage(navController: NavController,context: Context){
                     start.linkTo(parent.start, margin = 60.dp)
                 }
         ){
-            //TODO 分析历史记录等
+            analyseDisplayText(context = context)
         }
+    }
+}
+@Composable
+fun analyseDisplayText(context: Context){
+    val all:List<mealInfo> = remember {
+        getHistoryList(context)
+    }
+    val canteenText=StringBuilder()
+    val windowText=StringBuilder()
+    val windowDetailText=StringBuilder()
+    val timesText=StringBuilder()
+    val resultText=StringBuilder()
+    var totalNumber=0
+    for (i in 0 until maxCanteenNumber){
+        totalNumber += maxWindowNumber[i]
+    }
+    var timesArray= Array(totalNumber){i->0}
+    var resultArray= Array(totalNumber){i->0}
+    for (mealInfo in all){
+        var totalNumber= windowTextToWindowNumber(mealInfo.windowText)
+        for (i in 1 until mealInfo.canteenNumber){
+            totalNumber += maxWindowNumber[i - 1]
+        }
+        timesArray[totalNumber-1]+=1
+        resultArray[totalNumber-1]+=(if(mealInfo.result<1) 3 else mealInfo.result)
+    }
+    for (i in 1 until maxCanteenNumber+1){
+        canteenText.append(context.getString(canteenNumberToCanteenTextId(i))+"\n")
+        windowText.append(windowNumberToWindowText(1)+"\n")
+        windowDetailText.append(readMealData(context,windowNumberToWindowText(1),i)+"\n")
+        for (j in 1 until maxWindowNumber[i-1]){
+            canteenText.append("\n")
+            windowText.append(windowNumberToWindowText(j+1)+"\n")
+            windowDetailText.append(readMealData(context,windowNumberToWindowText(j+1),i)+"\n")
+        }
+    }
+    for (i in 0 until totalNumber){
+        timesText.append(timesArray[i].toString()+"\n")
+        resultText.append((resultArray[i].toDouble()/(if (timesArray[i]==0) 1 else timesArray[i])).toString()+"\n")
+    }
+    canteenText.append("\n".repeat(2))
+    Row {
+        Text(
+            text = canteenText.toString(),
+            fontSize = 20.sp,
+            //fontFamily = FontFamily.Monospace,
+            lineHeight = 40.sp,
+            modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
+        )
+        Text(
+            text = windowText.toString(),
+            fontSize = 20.sp,
+            //fontFamily = FontFamily.Monospace,
+            lineHeight = 40.sp,
+            modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
+        )
+        Text(
+            text = windowDetailText.toString(),
+            fontSize = 20.sp,
+            //fontFamily = FontFamily.Monospace,
+            lineHeight = 40.sp,
+            modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
+        )
+        Text(
+            text = timesText.toString(),
+            fontSize = 20.sp,
+            //fontFamily = FontFamily.Monospace,
+            lineHeight = 40.sp,
+            modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
+        )
+        Text(
+            text = resultText.toString(),
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 20.sp,
+            //fontFamily = FontFamily.Monospace,
+            lineHeight = 40.sp,
+            modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
+        )
     }
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun editPage(modifier: Modifier = Modifier, navController: NavController, context: Context){
-    var textCanteen by remember { mutableStateOf("") }
-    var textWindow by remember { mutableStateOf("") }
+    var canteenText by remember { mutableStateOf("") }
+    var windowText by remember { mutableStateOf("") }
     ConstraintLayout(
         Modifier.fillMaxWidth()
     ){
@@ -686,8 +753,8 @@ fun editPage(modifier: Modifier = Modifier, navController: NavController, contex
                 }
         )
         OutlinedTextField(
-            value = textCanteen,
-            onValueChange = { textCanteen = it },
+            value = canteenText,
+            onValueChange = { canteenText = it },
             label = { Text("食堂名称") },
             modifier=Modifier
                 .constrainAs(text2) {
@@ -697,8 +764,8 @@ fun editPage(modifier: Modifier = Modifier, navController: NavController, contex
                 }
         )//TODO 改进输入方式
         OutlinedTextField(
-            value = textWindow,
-            onValueChange = { textWindow = it },
+            value = windowText,
+            onValueChange = { windowText = it },
             label = { Text("窗口名称") },
             modifier=Modifier
                 .constrainAs(text3) {
@@ -709,7 +776,7 @@ fun editPage(modifier: Modifier = Modifier, navController: NavController, contex
         )
         Button(
             onClick = {
-                insertDatabase(textCanteen.toInt(),"第"+textWindow+"窗口",context)
+                insertDatabase(canteenText.toInt(),"第"+windowText+"窗口",context)
             },
             modifier=Modifier
                 .constrainAs(button) {
@@ -726,7 +793,7 @@ fun editPage(modifier: Modifier = Modifier, navController: NavController, contex
     }
 }
 fun mealNumberToTextId(mealNumber: Int): Int {
-    var result=when(mealNumber){
+    val result=when(mealNumber){
         0->R.string.lunchText
         1->R.string.dinnerText
         else->R.string.nullText
@@ -734,41 +801,51 @@ fun mealNumberToTextId(mealNumber: Int): Int {
     return result
 }
 fun randomCanteen(): Int {
-    var result:Int
-    result=(1..4).random()
+    val result:Int
+    result=(1..maxCanteenNumber).random()
     return result
 }
 fun randomWindow(canteenNumber:Int): String {
-    var result:Int
+    val result:Int
     result=(1..20).random()
-    return "第"+result+"窗口"
-}
+    return windowNumberToWindowText(result)
+}//TODO 窗口更新
 fun canteenNumberToCanteenTextId(canteenNumber: Int):Int {
     val result=when(canteenNumber){
-        1->R.string.canteen1Text
-        2->R.string.canteen3Text
-        3->R.string.canteen4Text
-        4->R.string.canteen5Text
+        1->R.string.canteen1floor1Text
+        2->R.string.canteen1floor2Text
+        3->R.string.canteen3floor1Text
+        4->R.string.canteen4floor1Text
+        5->R.string.canteen4floor2Text
+        6->R.string.canteen5floor2Text
+        7->R.string.canteen5floor3Text
         else->R.string.nullText
     }
     return result
 }
-fun writeFile(context: Context,str:String){
+fun writeMealData(context: Context, str:String){
     context.openFileOutput("mealData",Context.MODE_PRIVATE).use {
         it.write(str.toByteArray())
     }
 }
-fun readFile(context: Context,windowText: String,canteenNumber: Int):String{
-    var str=StringBuilder()
+fun readMealData(context: Context, windowText: String, canteenNumber: Int):String{
+    val str=StringBuilder()
     try {
-        var windowNumber=windowText.filter { it.isDigit() }.toInt()
+        val windowNumber= windowTextToWindowNumber(windowText)
         context.openFileInput("mealData").bufferedReader().forEachLine {
             if (it.filter { it.isDigit() }.toInt()==canteenNumber*100+windowNumber)
                 str.append(it.substring(3))
         }
-    }catch (e:Exception){}
+    }catch (_:Exception){}
     return str.toString()
 }
+fun windowTextToWindowNumber(windowText: String):Int{
+    return windowText.filter { it.isDigit() }.toInt()
+}
+fun windowNumberToWindowText(windowNumber: Int):String{
+    return "第"+windowNumber.toString()+"窗口"
+}
+
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
