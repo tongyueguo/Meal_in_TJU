@@ -16,16 +16,27 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Egg
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Loop
+import androidx.compose.material.icons.filled.Park
+import androidx.compose.material.icons.filled.RestaurantMenu
+import androidx.compose.material.icons.filled.SetMeal
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.twotone.Egg
+import androidx.compose.material.icons.twotone.Park
+import androidx.compose.material.icons.twotone.SetMeal
 import androidx.compose.material.icons.twotone.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,9 +52,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -104,7 +117,13 @@ data class mealInfo(
     @ColumnInfo(name = "windowText")
     var windowText: String = "" ,
     @ColumnInfo(name = "result")
-    var result: Int = -1//Int?=0
+    var result: Int = -1,
+    @ColumnInfo(name = "meat")
+    var meat: Boolean = false,
+    @ColumnInfo(name = "egg")
+    var egg: Boolean = false,
+    @ColumnInfo(name = "vegetable")
+    var vegetable: Boolean = false,
 )
 @Dao
 interface mealInfoDao {
@@ -161,29 +180,22 @@ fun MainView(context: Context){
         composable("editPage"){
             editPage(navController = navController, context = context)
         }
+        composable("resultPage"){
+            resultPage(navController = navController, context = context)
+        }
     }
 }
 @Composable
 fun mainPage(modifier: Modifier = Modifier, navController: NavController, context: Context) {
-    //writeFile(context,"")
     var status by remember {mutableStateOf(checkStatus(context))}//0:无记录  1:已有记录从数据库读  2:已有记录不从数据库读数据
     val mealInfo= queryMealInfo(context)
     var canteenNumber by remember { mutableStateOf(if (status==1)mealInfo.canteenNumber else 0) }
     val canteenTextId=canteenNumberToCanteenTextId(canteenNumber)
     var windowText by remember { mutableStateOf(if (status==1)mealInfo.windowText else context.getString(R.string.window1Text)+"1"+context.getString(R.string.window2Text)) }
-    val buttonText = if(status!=0)R.string.changeText else R.string.whatToEatText
-    val buttonHeight by animateDpAsState(
-        targetValue = if(status==0)450.dp else 650.dp ,
-        animationSpec = tween(durationMillis = 1000, easing = LinearOutSlowInEasing),
-        label = ""
-    )
-    var result by remember {
-        mutableStateOf(if (status==1)mealInfo.result else 0)
-    }
     ConstraintLayout(
         Modifier.fillMaxWidth()
     ){
-        val (button,text1,text2,text3,text4,icon1,icon2,icon3,ratingBar) = createRefs()
+        val (text1,text2,text3,text4,icon1,icon2,icon3,icon4,icon5,icon6) = createRefs()
         IconButton(
             onClick = {
                 navController.navigate("settingPage")
@@ -224,10 +236,10 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         AnimatedVisibility (status!=0,
             modifier = Modifier
                 .constrainAs(text1) {
-                top.linkTo(parent.top, margin = 210.dp)
-                start.linkTo(parent.start)
-                end.linkTo(parent.end)
-            }
+                    top.linkTo(parent.top, margin = 210.dp)
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                }
         ){
             Text(
                 text = stringResource(R.string.beforeCanteenText),
@@ -268,21 +280,6 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
             )
         }
         AnimatedVisibility (status!=0,
-            modifier = Modifier.constrainAs(ratingBar) {
-                top.linkTo(parent.top, margin = 575.dp)
-                start.linkTo(parent.start)
-                end.linkTo(parent.end)
-            }
-        ){
-            Row {
-                Icon(if (result-1 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier.clickable { result=1;updateResult(result,context) } , tint =MaterialTheme.colorScheme.primary )
-                Icon(if (result-2 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier.clickable { result=2;updateResult(result,context) } , tint =MaterialTheme.colorScheme.primary )
-                Icon(if (result-3 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier.clickable { result=3;updateResult(result,context) } , tint =MaterialTheme.colorScheme.primary )
-                Icon(if (result-4 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier.clickable { result=4;updateResult(result,context) } , tint =MaterialTheme.colorScheme.primary )
-                Icon(if (result-5 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier.clickable { result=5;updateResult(result,context) } , tint =MaterialTheme.colorScheme.primary )
-            }
-        }
-        AnimatedVisibility (status!=0,
             modifier = Modifier.constrainAs(text4) {
                 top.linkTo(parent.top, margin = 460.dp)
                 start.linkTo(parent.start)
@@ -297,30 +294,142 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
                 //fontFamily = FontFamily.Serif,
             )
         }
-        Button(
-            onClick =
-            {
-                status=2
-                canteenNumber=randomCanteen()
-                windowText=randomWindow(canteenNumber, context = context)
-                insertDatabase(canteenNumber,windowText,context)
-            },
-            modifier= Modifier
-                .defaultMinSize()
-                .constrainAs(button) {
-                    top.linkTo(parent.top, margin = buttonHeight)
-                    start.linkTo(parent.start)
-                    end.linkTo(parent.end)
+        AnimatedVisibility (status!=0,
+            modifier = Modifier.constrainAs(icon4) {
+                top.linkTo(parent.top, margin = 600.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ){
+            IconButton(
+                onClick = {
+                    navController.navigate("resultPage")
                 }
-        ) {
-            Text(
-                text = stringResource(buttonText),
-                fontSize = 40.sp
-            )
+            ){
+                Icon(Icons.Filled.ArrowForward, null, modifier = Modifier.size(60.dp), tint =MaterialTheme.colorScheme.primary)
+            }
+        }
+        AnimatedVisibility (status!=0,
+            modifier = Modifier.constrainAs(icon5) {
+                top.linkTo(parent.top, margin = 700.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ){
+            IconButton(
+                onClick = {
+                    status=2
+                    canteenNumber=randomCanteen()
+                    windowText=randomWindow(canteenNumber, context = context)
+                    insertDatabase(canteenNumber,windowText,context)
+                }
+            ){
+                Icon(Icons.Filled.Loop, null, modifier = Modifier.size(60.dp))
+            }
+        }
+        AnimatedVisibility (status==0,
+            modifier = Modifier.constrainAs(icon6) {
+                top.linkTo(parent.top, margin = 350.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ){
+            IconButton(
+                onClick = {
+                    status=2
+                    canteenNumber=randomCanteen()
+                    windowText=randomWindow(canteenNumber, context = context)
+                    insertDatabase(canteenNumber,windowText,context)
+                }
+            ){
+                Icon(Icons.Filled.RestaurantMenu, null, modifier = Modifier.size(100.dp))
+            }
         }
     }
 }
 
+@Composable
+fun resultPage(modifier: Modifier = Modifier, navController: NavController, context: Context) {
+    var mealInfo= queryMealInfo(context)
+    var result by remember {
+        mutableStateOf(mealInfo.result)
+    }
+    var meat by remember {
+        mutableStateOf(mealInfo.meat)
+    }
+    var egg by remember {
+        mutableStateOf(mealInfo.egg)
+    }
+    var vegetable by remember {
+        mutableStateOf(mealInfo.vegetable)
+    }
+    ConstraintLayout(
+        Modifier.fillMaxWidth()
+    ){
+        val (text1,icon1,ratingBar,infoBar) = createRefs()
+        Text(
+            text = "评价",
+            fontSize = 60.sp,
+            modifier = Modifier.constrainAs(text1) {
+                top.linkTo(parent.top, margin = 150.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        )
+        Row (
+            modifier = Modifier.constrainAs(ratingBar) {
+                top.linkTo(parent.top, margin = 300.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ){
+            Icon(if (result-1 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier
+                .clickable { result = 1;updateResult(result, context) }
+                .size(36.dp) , tint =MaterialTheme.colorScheme.primary )
+            Icon(if (result-2 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier
+                .clickable { result = 2;updateResult(result, context) }
+                .size(36.dp) , tint =MaterialTheme.colorScheme.primary )
+            Icon(if (result-3 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier
+                .clickable { result = 3;updateResult(result, context) }
+                .size(36.dp) , tint =MaterialTheme.colorScheme.primary )
+            Icon(if (result-4 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier
+                .clickable { result = 4;updateResult(result, context) }
+                .size(36.dp) , tint =MaterialTheme.colorScheme.primary )
+            Icon(if (result-5 >= 0) Icons.Filled.Star else Icons.TwoTone.Star, null, modifier = Modifier
+                .clickable { result = 5;updateResult(result, context) }
+                .size(36.dp) , tint =MaterialTheme.colorScheme.primary )
+        }
+        Row (
+            modifier = Modifier.constrainAs(infoBar) {
+                top.linkTo(parent.top, margin = 400.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ){
+            Icon(if(meat) Icons.Filled.SetMeal else Icons.TwoTone.SetMeal , null, modifier = Modifier
+                .clickable { meat = !meat;updateMeat(meat, context) }
+                .size(36.dp), tint =MaterialTheme.colorScheme.primary)
+            Icon(Icons.Filled.Star,"", tint =MaterialTheme.colorScheme.background)
+            Icon(if(egg) Icons.Filled.Egg else Icons.TwoTone.Egg , null, modifier = Modifier
+                .clickable { egg = !egg;updateEgg(egg, context) }
+                .size(36.dp), tint =MaterialTheme.colorScheme.primary)
+            Icon(Icons.Filled.Star,"", tint =MaterialTheme.colorScheme.background)
+            Icon(if(vegetable) Icons.Filled.Park else Icons.TwoTone.Park , null, modifier = Modifier
+                .clickable { vegetable = !vegetable;updateVegetable(vegetable, context) }
+                .size(36.dp), tint =MaterialTheme.colorScheme.primary)
+        }
+        IconButton(onClick = { navController.navigate("mainPage") },
+            modifier = Modifier.constrainAs(icon1) {
+                top.linkTo(parent.top, margin = 600.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ){
+            Icon(Icons.Filled.Done, "", modifier = Modifier.size(60.dp), tint =MaterialTheme.colorScheme.primary)
+        }
+    }
+
+}
 fun queryMealInfo(context: Context): mealInfo= runBlocking{
     val mCalendar= getCalendar()
     var mealInfo=mealInfo()
@@ -340,6 +449,27 @@ fun getCalendar():Calendar{
 fun updateResult(result: Int,context: Context)= runBlocking{
     var mealInfo= queryMealInfo(context)
     mealInfo.result=result
+    val job = launch {mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo)}
+    job.join()
+    return@runBlocking
+}
+fun updateEgg(egg: Boolean,context: Context)= runBlocking{
+    var mealInfo= queryMealInfo(context)
+    mealInfo.egg=egg
+    val job = launch {mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo)}
+    job.join()
+    return@runBlocking
+}
+fun updateMeat(meat: Boolean,context: Context)= runBlocking{
+    var mealInfo= queryMealInfo(context)
+    mealInfo.meat=meat
+    val job = launch {mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo)}
+    job.join()
+    return@runBlocking
+}
+fun updateVegetable(vegetable: Boolean,context: Context)= runBlocking{
+    var mealInfo= queryMealInfo(context)
+    mealInfo.vegetable=vegetable
     val job = launch {mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo)}
     job.join()
     return@runBlocking
@@ -367,7 +497,7 @@ fun checkStatus(context: Context):Int= runBlocking{
 }
 fun insertDatabase(canteenNumber: Int, windowText: String,context: Context)=runBlocking{
     val mCalendar= getCalendar()
-    val insert = launch{
+    val job = launch{
         val mealInfo = mealInfo()
         mealInfo.year = mCalendar.get(Calendar.YEAR)
         mealInfo.month = mCalendar.get(Calendar.MONTH)+1
@@ -376,9 +506,12 @@ fun insertDatabase(canteenNumber: Int, windowText: String,context: Context)=runB
         mealInfo.canteenNumber = canteenNumber
         mealInfo.windowText = windowText
         mealInfo.result = 0
+        mealInfo.egg = false
+        mealInfo.vegetable = false
+        mealInfo.meat = false
         mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo)
     }
-    insert.join()
+    job.join()
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -422,7 +555,7 @@ fun settingPage(modifier: Modifier = Modifier, navController: NavController,cont
                 },
             trailingIcon = {
                 IconButton(onClick = {text=""}) {
-                Icon(Icons.Filled.Clear,"")
+                    Icon(Icons.Filled.Clear,"")
                 }
             },
             maxLines = 3)
@@ -539,6 +672,9 @@ fun historyDisplayText(context: Context){
     val windowText=StringBuilder()
     val resultText=StringBuilder()
     val windowDetailText=StringBuilder()
+    val meatText=StringBuilder()
+    val eggText=StringBuilder()
+    val vegetableText=StringBuilder()
     for(mealInfo in all){
         timeText.append(mealInfo.year.toString() +"."+mealInfo.month.toString()+"."+mealInfo.day.toString()+"\n")
         canteenText.append(context.getString(canteenNumberToCanteenTextId(mealInfo.canteenNumber))+"\n")
@@ -546,6 +682,9 @@ fun historyDisplayText(context: Context){
         windowText.append(mealInfo.windowText+"\n")
         windowDetailText.append(readMealData(context,mealInfo.windowText,mealInfo.canteenNumber)+"\n")
         resultText.append(if(mealInfo.result!=0)mealInfo.result.toString()+"\n" else context.getString(R.string.noResultText)+"\n")
+        meatText.append(mealInfo.meat.toString()+"\n")
+        eggText.append(mealInfo.egg.toString()+"\n")
+        vegetableText.append(mealInfo.vegetable.toString()+"\n")
     }
     canteenText.append("\n".repeat(2))
     Row {
@@ -587,6 +726,27 @@ fun historyDisplayText(context: Context){
         )
         Text(
             text = resultText.toString(),
+            fontSize = 18.sp,
+            //fontFamily = FontFamily.Monospace,
+            lineHeight = 30.sp,
+            modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
+        )
+        Text(
+            text = meatText.toString(),
+            fontSize = 18.sp,
+            //fontFamily = FontFamily.Monospace,
+            lineHeight = 30.sp,
+            modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
+        )
+        Text(
+            text = eggText.toString(),
+            fontSize = 18.sp,
+            //fontFamily = FontFamily.Monospace,
+            lineHeight = 30.sp,
+            modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
+        )
+        Text(
+            text = vegetableText.toString(),
             fontSize = 18.sp,
             //fontFamily = FontFamily.Monospace,
             lineHeight = 30.sp,
@@ -807,7 +967,7 @@ fun randomCanteen(): Int {
 }
 fun randomWindow(canteenNumber:Int,context: Context): String {
     val result:Int
-    result=(1..20).random()
+    result=(1..maxWindowNumber[canteenNumber]).random()
     return windowNumberToWindowText(result,context)
 }//TODO 窗口更新
 fun canteenNumberToCanteenTextId(canteenNumber: Int):Int {
