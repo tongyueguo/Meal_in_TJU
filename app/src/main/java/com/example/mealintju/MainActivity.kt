@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -347,7 +348,6 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         }
     }
 }
-
 @Composable
 fun resultPage(modifier: Modifier = Modifier, navController: NavController, context: Context) {
     var mealInfo= queryMealInfo(context)
@@ -428,7 +428,6 @@ fun resultPage(modifier: Modifier = Modifier, navController: NavController, cont
             Icon(Icons.Filled.Done, "", modifier = Modifier.size(60.dp), tint =MaterialTheme.colorScheme.primary)
         }
     }
-
 }
 fun queryMealInfo(context: Context): mealInfo= runBlocking{
     val mCalendar= getCalendar()
@@ -439,7 +438,6 @@ fun queryMealInfo(context: Context): mealInfo= runBlocking{
     query.join()
     return@runBlocking mealInfo
 }
-
 fun getCalendar():Calendar{
     val time = System.currentTimeMillis()
     val mCalendar:Calendar = Calendar.getInstance()
@@ -558,35 +556,29 @@ fun settingPage(modifier: Modifier = Modifier, navController: NavController,cont
                     Icon(Icons.Filled.Clear,"")
                 }
             },
-            maxLines = 3)
-        Button(
+            maxLines = 5)
+        IconButton(
             onClick = {
                 writeMealData(context = context,text)
-            },
-            modifier=Modifier
-                .constrainAs(button) {
-                    top.linkTo(parent.top, margin = 350.dp)
-                    start.linkTo(parent.start)
-                    end.linkTo(parent.end)
-                }
+            },modifier = Modifier.constrainAs(button) {
+                top.linkTo(parent.top, margin = 350.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
         ){
-            Text(
-                text = stringResource(R.string.confirmText),
-                fontSize = 30.sp
-            )
+            Icon(Icons.Filled.Done, null, modifier = Modifier.size(60.dp))
         }
         Column (
             modifier= Modifier
                 .verticalScroll(scrollState)
                 .fillMaxSize()
                 .constrainAs(text3) {
-                    top.linkTo(parent.top, margin = 800.dp)
+                    top.linkTo(parent.top, margin = 900.dp)
                     start.linkTo(parent.start, margin = 60.dp)
                 }
         ){
             Text(text = "Meal In TJU")
             Text(text = "© 2023 TongyueGuo")
-            //TODO 设置界面等
         }
     }
 }
@@ -645,24 +637,6 @@ fun historyPage(modifier: Modifier = Modifier, navController: NavController, con
 }
 @Composable
 fun historyDisplayText(context: Context){
-    /*var str by remember {
-        mutableStateOf(StringBuilder())
-    }
-    LaunchedEffect(null) {
-        var all=mealInfoDatabase.getDatabase(context).mealInfoDao().getAll()
-        for (mealInfo in all){
-            str.append(mealInfo.year.toString()
-                    +context.getString(R.string.yearText)
-                    +mealInfo.month.toString()
-                    +context.getString(R.string.monthText)
-                    +mealInfo.day.toString()
-                    +context.getString(R.string.dayText)
-                    +context.getString(mealNumberToTextId(mealInfo.mealNumber))
-                    +context.getString(canteenNumberToCanteenTextId(mealInfo.canteenNumber))
-                    +mealInfo.windowText
-                    +"\n")
-        }
-    }*/
     val all:List<mealInfo> = remember {
         getHistoryList(context)
     }
@@ -672,19 +646,25 @@ fun historyDisplayText(context: Context){
     val windowText=StringBuilder()
     val resultText=StringBuilder()
     val windowDetailText=StringBuilder()
-    val meatText=StringBuilder()
-    val eggText=StringBuilder()
-    val vegetableText=StringBuilder()
+    val eggList = mutableListOf<Boolean>()
+    val meatList = mutableListOf<Boolean>()
+    val vegetableList = mutableListOf<Boolean>()
+    timeText.append(stringResource(R.string.timeText)+"\n")
+    canteenText.append(stringResource(R.string.canteenText)+"\n")
+    mealNumberText.append(stringResource(R.string.mealNumberText)+"\n")
+    windowText.append(stringResource(R.string.windowText)+"\n")
+    windowDetailText.append(stringResource(R.string.windowDetailText)+"\n")
+    resultText.append(stringResource(R.string.resultText)+"\n")
     for(mealInfo in all){
         timeText.append(mealInfo.year.toString() +"."+mealInfo.month.toString()+"."+mealInfo.day.toString()+"\n")
         canteenText.append(context.getString(canteenNumberToCanteenTextId(mealInfo.canteenNumber))+"\n")
         mealNumberText.append(context.getString(mealNumberToTextId(mealInfo.mealNumber))+"\n")
-        windowText.append(mealInfo.windowText+"\n")
+        windowText.append(windowTextToWindowNumber(mealInfo.windowText).toString() +"\n")
         windowDetailText.append(readMealData(context,mealInfo.windowText,mealInfo.canteenNumber)+"\n")
         resultText.append(if(mealInfo.result!=0)mealInfo.result.toString()+"\n" else context.getString(R.string.noResultText)+"\n")
-        meatText.append(mealInfo.meat.toString()+"\n")
-        eggText.append(mealInfo.egg.toString()+"\n")
-        vegetableText.append(mealInfo.vegetable.toString()+"\n")
+        eggList.add(mealInfo.egg)
+        meatList.add(mealInfo.meat)
+        vegetableList.add(mealInfo.vegetable)
     }
     canteenText.append("\n".repeat(2))
     Row {
@@ -701,7 +681,7 @@ fun historyDisplayText(context: Context){
             fontSize = 18.sp,
             //fontFamily = FontFamily.Monospace,
             lineHeight = 30.sp,
-            modifier = Modifier.padding(start = 20.dp,top=0.dp,end=0.dp,bottom=0.dp)
+            modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
             text = canteenText.toString(),
@@ -731,27 +711,36 @@ fun historyDisplayText(context: Context){
             lineHeight = 30.sp,
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
-        Text(
-            text = meatText.toString(),
-            fontSize = 18.sp,
-            //fontFamily = FontFamily.Monospace,
-            lineHeight = 30.sp,
-            modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
-        )
-        Text(
-            text = eggText.toString(),
-            fontSize = 18.sp,
-            //fontFamily = FontFamily.Monospace,
-            lineHeight = 30.sp,
-            modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
-        )
-        Text(
-            text = vegetableText.toString(),
-            fontSize = 18.sp,
-            //fontFamily = FontFamily.Monospace,
-            lineHeight = 30.sp,
-            modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
-        )
+        Column {
+            Icon(Icons.Filled.SetMeal, "", modifier = Modifier
+                .height(30.dp)
+                .padding(start = 10.dp, top = 0.dp, end = 0.dp, bottom = 0.dp) , tint = Color.Black )
+            for (temp in meatList){
+                Icon(if(temp) Icons.Filled.SetMeal else Icons.TwoTone.SetMeal , "", modifier = Modifier
+                    .height(30.dp)
+                    .padding(start = 10.dp, top = 0.dp, end = 0.dp, bottom = 0.dp) , tint = MaterialTheme.colorScheme.primary )
+            }
+        }
+        Column {
+            Icon(Icons.Filled.Egg, "", modifier = Modifier
+                .height(30.dp)
+                .padding(start = 10.dp, top = 0.dp, end = 0.dp, bottom = 0.dp) , tint = Color.Black )
+            for (temp in eggList){
+                Icon(if(temp) Icons.Filled.Egg else Icons.TwoTone.Egg , "", modifier = Modifier
+                    .height(30.dp)
+                    .padding(start = 10.dp, top = 0.dp, end = 0.dp, bottom = 0.dp) , tint = MaterialTheme.colorScheme.primary )
+            }
+        }
+        Column {
+            Icon(Icons.Filled.Park, "", modifier = Modifier
+                .height(30.dp)
+                .padding(start = 10.dp, top = 0.dp, end = 0.dp, bottom = 0.dp) , tint = Color.Black )
+            for (temp in vegetableList){
+                Icon(if(temp) Icons.Filled.Park else Icons.TwoTone.Park , "", modifier = Modifier
+                    .height(30.dp)
+                    .padding(start = 10.dp, top = 0.dp, end = 0.dp, bottom = 0.dp) , tint = MaterialTheme.colorScheme.primary )
+            }
+        }
     }
 }
 fun getHistoryList(context: Context):List<mealInfo> = runBlocking {
@@ -815,6 +804,11 @@ fun analyseDisplayText(context: Context){
     val timesText=StringBuilder()
     val resultText=StringBuilder()
     var totalNumber=0
+    canteenText.append(stringResource(R.string.canteenText)+"\n")
+    windowText.append(stringResource(R.string.windowText)+"\n")
+    windowDetailText.append(stringResource(R.string.windowDetailText)+"\n")
+    timesText.append(stringResource(R.string.timesText)+"\n")
+    resultText.append(stringResource(R.string.resultText)+"\n")
     for (i in 0 until maxCanteenNumber){
         totalNumber += maxWindowNumber[i]
     }
@@ -934,21 +928,17 @@ fun editPage(modifier: Modifier = Modifier, navController: NavController, contex
                     end.linkTo(parent.end)
                 }
         )
-        Button(
+        IconButton(
             onClick = {
-                insertDatabase(canteenText.toInt(),"第"+windowText+"窗口",context)
-            },
-            modifier=Modifier
-                .constrainAs(button) {
-                    top.linkTo(parent.top, margin = 350.dp)
-                    start.linkTo(parent.start)
-                    end.linkTo(parent.end)
-                }
+                insertDatabase(canteenText.toInt(), context.getString(R.string.window1Text)+windowText+context.getString(R.string.window2Text),context)
+                navController.navigate("mainPage")
+            },modifier = Modifier.constrainAs(button) {
+                top.linkTo(parent.top, margin = 350.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
         ){
-            Text(
-                text = stringResource(R.string.confirmText),
-                fontSize = 30.sp
-            )
+            Icon(Icons.Filled.Done, null, modifier = Modifier.size(60.dp))
         }
     }
 }
@@ -967,7 +957,7 @@ fun randomCanteen(): Int {
 }
 fun randomWindow(canteenNumber:Int,context: Context): String {
     val result:Int
-    result=(1..maxWindowNumber[canteenNumber]).random()
+    result=(1..maxWindowNumber[canteenNumber-1]).random()
     return windowNumberToWindowText(result,context)
 }//TODO 窗口更新
 fun canteenNumberToCanteenTextId(canteenNumber: Int):Int {

@@ -2,13 +2,13 @@
     <string name="app_name">Meal in TJU</string>
     <string name="whatToEatText">吃什么</string>
     <string name="changeText">换一个</string>
-    <string name="canteen1floor1Text">学一食堂一楼</string>
-    <string name="canteen1floor2Text">学一食堂二楼</string>
-    <string name="canteen3floor1Text">学三食堂一楼</string>
-    <string name="canteen4floor1Text">学四食堂一楼</string>
-    <string name="canteen4floor2Text">学四食堂二楼</string>
-    <string name="canteen5floor2Text">学五食堂二楼</string>
-    <string name="canteen5floor3Text">学五食堂三楼</string>
+    <string name="canteen1floor1Text">学一一楼</string>
+    <string name="canteen1floor2Text">学一二楼</string>
+    <string name="canteen3floor1Text">学三一楼</string>
+    <string name="canteen4floor1Text">学四一楼</string>
+    <string name="canteen4floor2Text">学四二楼</string>
+    <string name="canteen5floor2Text">学五二楼</string>
+    <string name="canteen5floor3Text">学五三楼</string>
     <string name="beforeCanteenText">吃</string>
     <string name="nullText"></string>
     <string name="window1Text">第</string>
@@ -23,9 +23,19 @@
     <string name="analyseText">分析</string>
     <string name="confirmText">确定</string>
     <string name="editText">修改</string>
-    <string name="noResultText">未评价</string>
+    <string name="noResultText">未评分</string>
     <string name="windowText">窗口</string>
     <string name="canteenText">食堂</string>
+    <string name="timeText">时间</string>
+    <string name="resultText">评分</string>
+    <string name="mealNumberText">餐段</string>
+    <string name="windowDetailText">内容</string>
+    <string name="timesText">次数</string>
+
+
+
+
+
 
 
 
