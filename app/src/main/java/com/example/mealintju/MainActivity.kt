@@ -82,7 +82,7 @@ import kotlinx.coroutines.runBlocking
 import java.util.Calendar
 
 const val maxCanteenNumber=7
-val maxWindowNumber= arrayOf(20,20,20,20,20,20,20)
+val maxWindowNumber= arrayOf(20,20,20,20,20,20,25)
 
 class MainActivity : ComponentActivity() {
     @SuppressLint("CoroutineCreationDuringComposition")
@@ -125,6 +125,8 @@ data class mealInfo(
     var egg: Boolean = false,
     @ColumnInfo(name = "vegetable")
     var vegetable: Boolean = false,
+    @ColumnInfo(name = "location")
+    var location: Int = 0,
 )
 @Dao
 interface mealInfoDao {
@@ -188,15 +190,20 @@ fun MainView(context: Context){
 }
 @Composable
 fun mainPage(modifier: Modifier = Modifier, navController: NavController, context: Context) {
-    var status by remember {mutableStateOf(checkStatus(context))}//0:无记录  1:已有记录从数据库读  2:已有记录不从数据库读数据
+    var status by remember { mutableStateOf(checkStatus(context)) }//0:无记录  1:已有记录从数据库读  2:已有记录不从数据库读数据
     val mealInfo= queryMealInfo(context)
     var canteenNumber by remember { mutableStateOf(if (status==1)mealInfo.canteenNumber else 0) }
+    var location by remember { mutableStateOf(if (status==1)mealInfo.location else 0) }
     val canteenTextId=canteenNumberToCanteenTextId(canteenNumber)
     var windowText by remember { mutableStateOf(if (status==1)mealInfo.windowText else context.getString(R.string.window1Text)+"1"+context.getString(R.string.window2Text)) }
+    Button(onClick = { status=0 }) {
+        Text(text = "Debug Only")
+    }
     ConstraintLayout(
         Modifier.fillMaxWidth()
     ){
-        val (text1,text2,text3,text4,icon1,icon2,icon3,icon4,icon5,icon6) = createRefs()
+        val (text1,text2,text3,text4,text5,icon1,icon2,icon3,icon4,icon5,icon6,iconGroup) = createRefs()
+        ///////////////////////////////////////////////////导航栏
         IconButton(
             onClick = {
                 navController.navigate("settingPage")
@@ -234,6 +241,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         ){
             Icon(Icons.Filled.Edit, null)
         }
+        ///////////////////////////////////////////////////文字
         AnimatedVisibility (status!=0,
             modifier = Modifier
                 .constrainAs(text1) {
@@ -320,13 +328,53 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
             IconButton(
                 onClick = {
                     status=2
-                    canteenNumber=randomCanteen()
+                    canteenNumber=randomCanteen(location)
                     windowText=randomWindow(canteenNumber, context = context)
-                    insertDatabase(canteenNumber,windowText,context)
+                    update(canteenNumber,windowText,context)
                 }
             ){
                 Icon(Icons.Filled.Loop, null, modifier = Modifier.size(60.dp))
             }
+        }
+        ///////////////////////////////////////////////////文字前
+        AnimatedVisibility (status==0,
+            modifier = Modifier.constrainAs(iconGroup) {
+                top.linkTo(parent.top, margin = 300.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ){
+            Row {
+                IconButton(
+                    onClick = {location=setLocation(location,12)}
+                ){
+                    Text(text = "12", color = if (location==12) MaterialTheme.colorScheme.primary else Color.Black, fontSize = 24.sp )
+                }
+                IconButton(
+                    onClick = {location=setLocation(location,19)}
+                ){
+                    Text(text = "19", color = if (location==19) MaterialTheme.colorScheme.primary else Color.Black, fontSize = 24.sp )
+                }
+                IconButton(
+                    onClick = {location=setLocation(location,23)}
+                ){
+                    Text(text = "23", color = if (location==23) MaterialTheme.colorScheme.primary else Color.Black, fontSize = 24.sp )
+                }
+                IconButton(
+                    onClick = {location=setLocation(location,26)}
+                ){
+                    Text(text = "26", color = if (location==26) MaterialTheme.colorScheme.primary else Color.Black, fontSize = 24.sp )
+                }
+            }
+        }
+        AnimatedVisibility (status==0,
+            modifier = Modifier.constrainAs(text5) {
+                top.linkTo(parent.top, margin = 200.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ){
+            Text(stringResource(R.string.locationText), fontSize = 50.sp)
         }
         AnimatedVisibility (status==0,
             modifier = Modifier.constrainAs(icon6) {
@@ -337,10 +385,11 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         ){
             IconButton(
                 onClick = {
+                    updateLocation(location, context)
                     status=2
-                    canteenNumber=randomCanteen()
+                    canteenNumber=randomCanteen(location)
                     windowText=randomWindow(canteenNumber, context = context)
-                    insertDatabase(canteenNumber,windowText,context)
+                    update(canteenNumber,windowText,context)
                 }
             ){
                 Icon(Icons.Filled.RestaurantMenu, null, modifier = Modifier.size(100.dp))
@@ -348,6 +397,13 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         }
     }
 }
+
+fun setLocation(location: Int, target: Int): Int {
+    var result:Int
+if (location==target) result=0 else result=target
+    return result
+}
+
 @Composable
 fun resultPage(modifier: Modifier = Modifier, navController: NavController, context: Context) {
     var mealInfo= queryMealInfo(context)
@@ -465,10 +521,30 @@ fun updateMeat(meat: Boolean,context: Context)= runBlocking{
     job.join()
     return@runBlocking
 }
-fun updateVegetable(vegetable: Boolean,context: Context)= runBlocking{
-    var mealInfo= queryMealInfo(context)
-    mealInfo.vegetable=vegetable
-    val job = launch {mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo)}
+fun updateVegetable(vegetable: Boolean,context: Context)= runBlocking {
+    var mealInfo = queryMealInfo(context)
+    mealInfo.vegetable = vegetable
+    val job = launch { mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo) }
+    job.join()
+    return@runBlocking
+}
+fun updateLocation(location:Int,context: Context)= runBlocking {
+    val mCalendar= getCalendar()
+    val job = launch{
+        val mealInfo = mealInfo()
+        mealInfo.year = mCalendar.get(Calendar.YEAR)
+        mealInfo.month = mCalendar.get(Calendar.MONTH)+1
+        mealInfo.day = mCalendar.get(Calendar.DAY_OF_MONTH)
+        mealInfo.mealNumber = mCalendar.get(Calendar.AM_PM)
+        mealInfo.canteenNumber = 0
+        mealInfo.windowText = ""
+        mealInfo.result = 0
+        mealInfo.egg = false
+        mealInfo.vegetable = false
+        mealInfo.meat = false
+        mealInfo.location = location
+        mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo)
+    }
     job.join()
     return@runBlocking
 }
@@ -493,23 +569,13 @@ fun checkStatus(context: Context):Int= runBlocking{
     query.join()
     return@runBlocking flag
 }
-fun insertDatabase(canteenNumber: Int, windowText: String,context: Context)=runBlocking{
-    val mCalendar= getCalendar()
-    val job = launch{
-        val mealInfo = mealInfo()
-        mealInfo.year = mCalendar.get(Calendar.YEAR)
-        mealInfo.month = mCalendar.get(Calendar.MONTH)+1
-        mealInfo.day = mCalendar.get(Calendar.DAY_OF_MONTH)
-        mealInfo.mealNumber = mCalendar.get(Calendar.AM_PM)
-        mealInfo.canteenNumber = canteenNumber
-        mealInfo.windowText = windowText
-        mealInfo.result = 0
-        mealInfo.egg = false
-        mealInfo.vegetable = false
-        mealInfo.meat = false
-        mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo)
-    }
+fun update(canteenNumber: Int, windowText: String,context: Context)=runBlocking{
+    var mealInfo = queryMealInfo(context)
+    mealInfo.canteenNumber = canteenNumber
+    mealInfo.windowText = windowText
+    val job = launch { mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo) }
     job.join()
+    return@runBlocking
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -930,7 +996,7 @@ fun editPage(modifier: Modifier = Modifier, navController: NavController, contex
         )
         IconButton(
             onClick = {
-                insertDatabase(canteenText.toInt(), context.getString(R.string.window1Text)+windowText+context.getString(R.string.window2Text),context)
+                update(canteenText.toInt(), context.getString(R.string.window1Text)+windowText+context.getString(R.string.window2Text),context)
                 navController.navigate("mainPage")
             },modifier = Modifier.constrainAs(button) {
                 top.linkTo(parent.top, margin = 350.dp)
@@ -950,9 +1016,15 @@ fun mealNumberToTextId(mealNumber: Int): Int {
     }
     return result
 }
-fun randomCanteen(): Int {
-    val result:Int
-    result=(1..maxCanteenNumber).random()
+fun randomCanteen(location:Int): Int {
+    var result=0
+    when(location){
+        19->result=(3..5).random()
+        23->result=(6..7).random()
+        26->result=(3..5).random()
+        12->{result=(1..4).random();if (result>2) result+=3}
+        else->result=(1..maxCanteenNumber).random()
+    }
     return result
 }
 fun randomWindow(canteenNumber:Int,context: Context): String {
