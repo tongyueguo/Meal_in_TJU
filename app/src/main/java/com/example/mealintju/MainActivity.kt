@@ -196,13 +196,10 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
     var location by remember { mutableStateOf(if (status==1)mealInfo.location else 0) }
     val canteenTextId=canteenNumberToCanteenTextId(canteenNumber)
     var windowText by remember { mutableStateOf(if (status==1)mealInfo.windowText else context.getString(R.string.window1Text)+"1"+context.getString(R.string.window2Text)) }
-    Button(onClick = { status=0 }) {
-        Text(text = "Debug Only")
-    }
     ConstraintLayout(
         Modifier.fillMaxWidth()
     ){
-        val (text1,text2,text3,text4,text5,icon1,icon2,icon3,icon4,icon5,icon6,iconGroup) = createRefs()
+        val (text1,text2,text3,text4,text5,icon1,icon2,icon3,icon4,icon5,icon6,icon7,iconGroup) = createRefs()
         ///////////////////////////////////////////////////导航栏
         IconButton(
             onClick = {
@@ -242,6 +239,18 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
             Icon(Icons.Filled.Edit, null)
         }
         ///////////////////////////////////////////////////文字
+        AnimatedVisibility (status!=0,
+            modifier=Modifier.constrainAs(icon7) {
+                top.linkTo(parent.top, margin = 20.dp)
+                start.linkTo(parent.start,margin=20.dp)
+            }
+        ){
+            IconButton(
+                onClick = { status=0 },
+            ){
+                Icon(Icons.Filled.ArrowBack, null)
+            }
+        }
         AnimatedVisibility (status!=0,
             modifier = Modifier
                 .constrainAs(text1) {
