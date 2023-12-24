@@ -194,7 +194,7 @@ fun MainView(context: Context){
 }
 @Composable
 fun mainPage(modifier: Modifier = Modifier, navController: NavController, context: Context) {
-    if(firstRun(context)){ writeMealData(context, stringResource(R.string.defaultMealInfoText)) }
+    if(firstRun(context)){ writeMealData(context, stringResource(R.string.defaultMealDataText)) }
     var status by remember { mutableStateOf(checkStatus(context)) }//0:无记录  1:已有记录从数据库读  2:已有记录不从数据库读数据
     val mealInfo= queryMealInfo(context)
     var canteenNumber by remember { mutableStateOf(if (status==1)mealInfo.canteenNumber else 0) }
@@ -391,7 +391,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         }
         AnimatedVisibility (status==0,
             modifier = Modifier.constrainAs(icon6) {
-                top.linkTo(parent.top, margin = 350.dp)
+                top.linkTo(parent.top, margin = 400.dp)
                 start.linkTo(parent.start)
                 end.linkTo(parent.end)
             }
