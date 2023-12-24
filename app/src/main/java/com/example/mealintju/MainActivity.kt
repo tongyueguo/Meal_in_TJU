@@ -3,23 +3,21 @@ package com.example.mealintju
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -29,6 +27,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Egg
+import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Loop
 import androidx.compose.material.icons.filled.Park
@@ -36,11 +35,11 @@ import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material.icons.filled.SetMeal
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Help
 import androidx.compose.material.icons.twotone.Egg
 import androidx.compose.material.icons.twotone.Park
 import androidx.compose.material.icons.twotone.SetMeal
 import androidx.compose.material.icons.twotone.Star
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,11 +53,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -191,6 +194,7 @@ fun MainView(context: Context){
 }
 @Composable
 fun mainPage(modifier: Modifier = Modifier, navController: NavController, context: Context) {
+    if(firstRun(context)){ writeMealData(context, stringResource(R.string.defaultMealInfoText)) }
     var status by remember { mutableStateOf(checkStatus(context)) }//0:无记录  1:已有记录从数据库读  2:已有记录不从数据库读数据
     val mealInfo= queryMealInfo(context)
     var canteenNumber by remember { mutableStateOf(if (status==1)mealInfo.canteenNumber else 0) }
@@ -218,7 +222,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
             onClick = {
                 navController.navigate("historyPage")
             },
-            modifier=Modifier
+            modifier = Modifier
                 .constrainAs(icon2) {
                     top.linkTo(parent.top, margin = 20.dp)
                     end.linkTo(parent.end, margin = 60.dp)
@@ -227,11 +231,10 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
             Icon(Icons.Filled.DateRange, null)
         }
         IconButton(
-            onClick =
-            {
+            onClick = {
                 navController.navigate("editPage")
             },
-            modifier=Modifier
+            modifier = Modifier
                 .constrainAs(icon3) {
                     top.linkTo(parent.top, margin = 20.dp)
                     end.linkTo(parent.end, margin = 100.dp)
@@ -241,7 +244,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         }
         ///////////////////////////////////////////////////文字
         AnimatedVisibility (status!=0,
-            modifier=Modifier.constrainAs(icon7) {
+            modifier = Modifier.constrainAs(icon7) {
                 top.linkTo(parent.top, margin = 20.dp)
                 start.linkTo(parent.start,margin=20.dp)
             }
@@ -264,7 +267,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
                 text = stringResource(R.string.beforeCanteenText),
                 //color = Color.Blue,
                 fontSize = 30.sp,
-                textAlign= TextAlign.Center,
+                textAlign = TextAlign.Center,
                 //fontFamily = FontFamily.Serif,
             )
         }
@@ -279,7 +282,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
                 text = stringResource(canteenTextId),
                 //color = Color.Blue,
                 fontSize = 60.sp,
-                textAlign= TextAlign.Center,
+                textAlign = TextAlign.Center,
                 //fontFamily = FontFamily.Serif,
             )
         }
@@ -294,7 +297,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
                 text = windowText,
                 //color = Color.Blue,
                 fontSize = 60.sp,
-                textAlign= TextAlign.Center,
+                textAlign = TextAlign.Center,
                 //fontFamily = FontFamily.Serif,
             )
         }
@@ -309,7 +312,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
                 text = readMealData(context,windowText,canteenNumber),
                 //color = Color.Blue,
                 fontSize = 60.sp,
-                textAlign= TextAlign.Center,
+                textAlign = TextAlign.Center,
                 //fontFamily = FontFamily.Serif,
             )
         }
@@ -358,22 +361,22 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
                 IconButton(
                     onClick = {location=setLocation(location,12)}
                 ){
-                    Text(text = "12", color = if (location==12) MaterialTheme.colorScheme.primary else Color.Black, fontSize = 24.sp )
+                    Text(stringResource(R.string.teachingBuilding12Text), color = if (location==12) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.inverseSurface, fontSize = 24.sp )
                 }
                 IconButton(
                     onClick = {location=setLocation(location,19)}
                 ){
-                    Text(text = "19", color = if (location==19) MaterialTheme.colorScheme.primary else Color.Black, fontSize = 24.sp )
+                    Text(stringResource(R.string.teachingBuilding19Text), color = if (location==19) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.inverseSurface, fontSize = 24.sp )
                 }
                 IconButton(
                     onClick = {location=setLocation(location,23)}
                 ){
-                    Text(text = "23", color = if (location==23) MaterialTheme.colorScheme.primary else Color.Black, fontSize = 24.sp )
+                    Text(stringResource(R.string.teachingBuilding23Text), color = if (location==23) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.inverseSurface, fontSize = 24.sp )
                 }
                 IconButton(
                     onClick = {location=setLocation(location,26)}
                 ){
-                    Text(text = "26", color = if (location==26) MaterialTheme.colorScheme.primary else Color.Black, fontSize = 24.sp )
+                    Text(stringResource(R.string.teachingBuilding26Text), color = if (location==26) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.inverseSurface, fontSize = 24.sp )
                 }
             }
         }
@@ -558,14 +561,6 @@ fun updateLocation(location:Int,context: Context)= runBlocking {
     job.join()
     return@runBlocking
 }
-fun setTime(mealInfo: mealInfo):mealInfo{
-    val mCalendar= getCalendar()
-    mealInfo.year = mCalendar.get(Calendar.YEAR)
-    mealInfo.month = mCalendar.get(Calendar.MONTH)+1
-    mealInfo.day = mCalendar.get(Calendar.DAY_OF_MONTH)
-    mealInfo.mealNumber = mCalendar.get(Calendar.AM_PM)
-    return mealInfo
-}
 fun checkStatus(context: Context):Int= runBlocking{
     val mCalendar= getCalendar()
     var mealInfo: mealInfo
@@ -593,9 +588,10 @@ fun settingPage(modifier: Modifier = Modifier, navController: NavController,cont
     ConstraintLayout(
         Modifier.fillMaxWidth()
     ){
-        val (button,text1,text2,text3,icon1) = createRefs()
-        var text by remember{ mutableStateOf("")}
-        var scrollState= rememberScrollState()
+        val (button,text1,text2,text3,text4,icon1,icon2) = createRefs()
+        var text by remember{ mutableStateOf("") }
+        val scrollState= rememberScrollState()
+        var status by remember { mutableStateOf(false) }
         IconButton(
             onClick = {
                 navController.navigate("mainPage")
@@ -617,10 +613,46 @@ fun settingPage(modifier: Modifier = Modifier, navController: NavController,cont
                     start.linkTo(parent.start,margin = 60.dp)
                 }
         )
+        IconButton(
+            onClick = {status=!status},
+            modifier=Modifier
+                .constrainAs(icon2) {
+                    top.linkTo(parent.top, margin = 20.dp)
+                    end.linkTo(parent.end, margin = 20.dp)
+                }
+        ) {
+            Icon(Icons.Outlined.Help, contentDescription ="" )
+        }
+        AnimatedVisibility (status,
+            modifier = Modifier.constrainAs(text4) {
+                top.linkTo(parent.top, margin = 350.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ){
+            val webText= buildAnnotatedString{
+                append(stringResource(R.string.help1Text))
+                pushStringAnnotation("URL","https://tongyueguo.github.io/mealData")
+                withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)){
+                    append(stringResource(R.string.help2Text))
+                }
+                append(stringResource(R.string.help3Text))
+                pop()
+            }
+            val uriHandler= LocalUriHandler.current
+            ClickableText(
+                text = webText,
+                onClick = {
+                webText.getStringAnnotations("URL",it,it)
+                    .firstOrNull()
+                    ?.let { uriHandler.openUri(it.item) }
+                }
+            )
+        }
         OutlinedTextField(
             value = text,
             onValueChange = { text = it },
-            label = { Text("字符串") },
+            label = { Text(stringResource(R.string.mealInfoStringText)) },
             modifier=Modifier
                 .constrainAs(text2) {
                     top.linkTo(parent.top, margin = 150.dp)
@@ -636,8 +668,10 @@ fun settingPage(modifier: Modifier = Modifier, navController: NavController,cont
         IconButton(
             onClick = {
                 writeMealData(context = context,text)
-            },modifier = Modifier.constrainAs(button) {
-                top.linkTo(parent.top, margin = 350.dp)
+                Toast.makeText(context, context.getString(R.string.changeSuceessText),Toast.LENGTH_SHORT).show()
+            },
+            modifier = Modifier.constrainAs(button) {
+                top.linkTo(parent.top, margin = 400.dp)
                 start.linkTo(parent.start)
                 end.linkTo(parent.end)
             }
@@ -749,7 +783,6 @@ fun historyDisplayText(context: Context){
         Text(
             text = timeText.toString(),
             fontSize = 18.sp,
-            //fontFamily = FontFamily.Default,
             lineHeight = 30.sp,
             color = MaterialTheme.colorScheme.primary,
             //modifier = Modifier.padding(20.dp)
@@ -757,42 +790,37 @@ fun historyDisplayText(context: Context){
         Text(
             text = mealNumberText.toString(),
             fontSize = 18.sp,
-            //fontFamily = FontFamily.Monospace,
             lineHeight = 30.sp,
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
             text = canteenText.toString(),
             fontSize = 18.sp,
-            //fontFamily = FontFamily.Monospace,
             lineHeight = 30.sp,
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
             text = windowText.toString(),
             fontSize = 18.sp,
-            //fontFamily = FontFamily.Monospace,
             lineHeight = 30.sp,
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
             text = windowDetailText.toString(),
             fontSize = 18.sp,
-            //fontFamily = FontFamily.Monospace,
             lineHeight = 30.sp,
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
             text = resultText.toString(),
             fontSize = 18.sp,
-            //fontFamily = FontFamily.Monospace,
             lineHeight = 30.sp,
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Column {
             Icon(Icons.Filled.SetMeal, "", modifier = Modifier
                 .height(30.dp)
-                .padding(start = 10.dp, top = 0.dp, end = 0.dp, bottom = 0.dp) , tint = Color.Black )
+                .padding(start = 10.dp, top = 0.dp, end = 0.dp, bottom = 0.dp) , tint = MaterialTheme.colorScheme.inverseSurface )
             for (temp in meatList){
                 Icon(if(temp) Icons.Filled.SetMeal else Icons.TwoTone.SetMeal , "", modifier = Modifier
                     .height(30.dp)
@@ -802,7 +830,7 @@ fun historyDisplayText(context: Context){
         Column {
             Icon(Icons.Filled.Egg, "", modifier = Modifier
                 .height(30.dp)
-                .padding(start = 10.dp, top = 0.dp, end = 0.dp, bottom = 0.dp) , tint = Color.Black )
+                .padding(start = 10.dp, top = 0.dp, end = 0.dp, bottom = 0.dp) , tint = MaterialTheme.colorScheme.inverseSurface )
             for (temp in eggList){
                 Icon(if(temp) Icons.Filled.Egg else Icons.TwoTone.Egg , "", modifier = Modifier
                     .height(30.dp)
@@ -812,7 +840,7 @@ fun historyDisplayText(context: Context){
         Column {
             Icon(Icons.Filled.Park, "", modifier = Modifier
                 .height(30.dp)
-                .padding(start = 10.dp, top = 0.dp, end = 0.dp, bottom = 0.dp) , tint = Color.Black )
+                .padding(start = 10.dp, top = 0.dp, end = 0.dp, bottom = 0.dp) , tint = MaterialTheme.colorScheme.inverseSurface )
             for (temp in vegetableList){
                 Icon(if(temp) Icons.Filled.Park else Icons.TwoTone.Park , "", modifier = Modifier
                     .height(30.dp)
@@ -836,9 +864,9 @@ fun analysePage(navController: NavController,context: Context){
     ConstraintLayout(
         Modifier.fillMaxWidth()
     ){
-        val (text1,text2,icon1,icon2) = createRefs()
-        var scrollState1= rememberScrollState()
-        var scrollState2= rememberScrollState()
+        val (text1,text2,icon1) = createRefs()
+        val scrollState1= rememberScrollState()
+        val scrollState2= rememberScrollState()
         IconButton(
             onClick = {
                 navController.navigate("historyPage")
@@ -892,8 +920,8 @@ fun analyseDisplayText(context: Context){
     for (i in 0 until maxCanteenNumber){
         totalNumber += maxWindowNumber[i]
     }
-    var timesArray= Array(totalNumber){i->0}
-    var resultArray= Array(totalNumber){i->0}
+    val timesArray= Array(totalNumber){ i->0}
+    val resultArray= Array(totalNumber){ i->0}
     for (mealInfo in all){
         var totalNumber= windowTextToWindowNumber(mealInfo.windowText)
         for (i in 1 until mealInfo.canteenNumber){
@@ -1047,7 +1075,7 @@ fun randomWindow(canteenNumber:Int,context: Context): String {
     val result:Int
     result=(1..maxWindowNumber[canteenNumber-1]).random()
     return windowNumberToWindowText(result,context)
-}//TODO 窗口更新
+}
 fun canteenNumberToCanteenTextId(canteenNumber: Int):Int {
     val result=when(canteenNumber){
         1->R.string.canteen1floor1Text
@@ -1076,6 +1104,14 @@ fun readMealData(context: Context, windowText: String, canteenNumber: Int):Strin
         }
     }catch (_:Exception){}
     return str.toString()
+}
+fun firstRun(context: Context):Boolean{
+    var flag=true
+    try {
+        context.openFileInput("mealData").bufferedReader().forEachLine {}
+        flag=false
+    }catch (_:Exception){}
+    return flag
 }
 fun windowTextToWindowNumber(windowText: String):Int{
     return windowText.filter { it.isDigit() }.toInt()
