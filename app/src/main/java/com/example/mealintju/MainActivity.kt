@@ -10,6 +10,7 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
@@ -663,7 +664,8 @@ fun historyPage(modifier: Modifier = Modifier, navController: NavController, con
         Modifier.fillMaxWidth()
     ){
         val (text1,text2,icon1,icon2) = createRefs()
-        var scrollState= rememberScrollState()
+        var scrollState1= rememberScrollState()
+        var scrollState2= rememberScrollState()
         IconButton(
             onClick = {
                 navController.navigate("mainPage")
@@ -699,11 +701,11 @@ fun historyPage(modifier: Modifier = Modifier, navController: NavController, con
         )
         Column (
             modifier= Modifier
-                .verticalScroll(scrollState)
-                .fillMaxSize()
+                .verticalScroll(scrollState1)
+                .horizontalScroll(scrollState2)
+                .fillMaxSize(0.9F)
                 .constrainAs(text2) {
                     top.linkTo(parent.top, margin = 80.dp)
-                    start.linkTo(parent.start, margin = 60.dp)
                 }
         ){
             historyDisplayText(context)
@@ -743,6 +745,7 @@ fun historyDisplayText(context: Context){
     }
     canteenText.append("\n".repeat(2))
     Row {
+        Text(stringResource(R.string.timeText),color=MaterialTheme.colorScheme.background)
         Text(
             text = timeText.toString(),
             fontSize = 18.sp,
@@ -816,6 +819,7 @@ fun historyDisplayText(context: Context){
                     .padding(start = 10.dp, top = 0.dp, end = 0.dp, bottom = 0.dp) , tint = MaterialTheme.colorScheme.primary )
             }
         }
+        Text(stringResource(R.string.timeText),color=MaterialTheme.colorScheme.background)
     }
 }
 fun getHistoryList(context: Context):List<mealInfo> = runBlocking {
@@ -833,7 +837,8 @@ fun analysePage(navController: NavController,context: Context){
         Modifier.fillMaxWidth()
     ){
         val (text1,text2,icon1,icon2) = createRefs()
-        var scrollState= rememberScrollState()
+        var scrollState1= rememberScrollState()
+        var scrollState2= rememberScrollState()
         IconButton(
             onClick = {
                 navController.navigate("historyPage")
@@ -857,11 +862,11 @@ fun analysePage(navController: NavController,context: Context){
         )
         Column (
             modifier= Modifier
-                .verticalScroll(scrollState)
-                .fillMaxSize()
+                .verticalScroll(scrollState1)
+                .horizontalScroll(scrollState2)
+                .fillMaxSize(0.9F)
                 .constrainAs(text2) {
                     top.linkTo(parent.top, margin = 80.dp)
-                    start.linkTo(parent.start, margin = 60.dp)
                 }
         ){
             analyseDisplayText(context = context)
@@ -913,6 +918,7 @@ fun analyseDisplayText(context: Context){
     }
     canteenText.append("\n".repeat(2))
     Row {
+        Text(stringResource(R.string.timeText),color=MaterialTheme.colorScheme.background)
         Text(
             text = canteenText.toString(),
             fontSize = 20.sp,
@@ -949,6 +955,7 @@ fun analyseDisplayText(context: Context){
             lineHeight = 40.sp,
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
+        Text(stringResource(R.string.timeText),color=MaterialTheme.colorScheme.background)
     }
 }
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1076,7 +1083,6 @@ fun windowTextToWindowNumber(windowText: String):Int{
 fun windowNumberToWindowText(windowNumber: Int,context: Context):String{
     return context.getString(R.string.window1Text)+windowNumber.toString()+context.getString(R.string.window2Text)
 }
-
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
