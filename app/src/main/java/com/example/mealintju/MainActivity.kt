@@ -54,9 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
@@ -87,14 +85,16 @@ import java.util.Calendar
 
 const val maxCanteenNumber=7
 val maxWindowNumber= arrayOf(20,20,20,20,20,20,25)
-
+/* ////////////////////////////////////////////////
+mealInfo用户每餐
+mealData窗口信息
+//////////////////////////////////////////////// */
 class MainActivity : ComponentActivity() {
     @SuppressLint("CoroutineCreationDuringComposition")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MealInTJUTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -105,8 +105,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-////////////////////////////
-//Room数据库
+/////////////////////////////////////////////Room数据库
 @Entity(primaryKeys = ["year", "month","day","mealNumber"])
 data class mealInfo(
     @ColumnInfo(name = "year")
@@ -242,7 +241,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         ){
             Icon(Icons.Filled.Edit, null)
         }
-        ///////////////////////////////////////////////////文字
+        ///////////////////////////////////////////////////展示界面
         AnimatedVisibility (status!=0,
             modifier = Modifier.constrainAs(icon7) {
                 top.linkTo(parent.top, margin = 20.dp)
@@ -265,10 +264,8 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         ){
             Text(
                 text = stringResource(R.string.beforeCanteenText),
-                //color = Color.Blue,
                 fontSize = 30.sp,
                 textAlign = TextAlign.Center,
-                //fontFamily = FontFamily.Serif,
             )
         }
         AnimatedVisibility (status!=0,
@@ -280,10 +277,8 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         ){
             Text(
                 text = stringResource(canteenTextId),
-                //color = Color.Blue,
                 fontSize = 60.sp,
                 textAlign = TextAlign.Center,
-                //fontFamily = FontFamily.Serif,
             )
         }
         AnimatedVisibility (status!=0,
@@ -295,10 +290,8 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         ){
             Text(
                 text = windowText,
-                //color = Color.Blue,
                 fontSize = 60.sp,
                 textAlign = TextAlign.Center,
-                //fontFamily = FontFamily.Serif,
             )
         }
         AnimatedVisibility (status!=0,
@@ -310,10 +303,8 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         ){
             Text(
                 text = readMealData(context,windowText,canteenNumber),
-                //color = Color.Blue,
                 fontSize = 60.sp,
                 textAlign = TextAlign.Center,
-                //fontFamily = FontFamily.Serif,
             )
         }
         AnimatedVisibility (status!=0,
@@ -349,7 +340,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
                 Icon(Icons.Filled.Loop, null, modifier = Modifier.size(60.dp))
             }
         }
-        ///////////////////////////////////////////////////文字前
+        ///////////////////////////////////////////////////选择界面
         AnimatedVisibility (status==0,
             modifier = Modifier.constrainAs(iconGroup) {
                 top.linkTo(parent.top, margin = 300.dp)
@@ -410,16 +401,14 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
         }
     }
 }
-
 fun setLocation(location: Int, target: Int): Int {
-    var result:Int
+    val result:Int
 if (location==target) result=0 else result=target
     return result
 }
-
 @Composable
 fun resultPage(modifier: Modifier = Modifier, navController: NavController, context: Context) {
-    var mealInfo= queryMealInfo(context)
+    val mealInfo= queryMealInfo(context)
     var result by remember {
         mutableStateOf(mealInfo.result)
     }
@@ -437,7 +426,7 @@ fun resultPage(modifier: Modifier = Modifier, navController: NavController, cont
     ){
         val (text1,icon1,ratingBar,infoBar) = createRefs()
         Text(
-            text = "评价",
+            text = stringResource(R.string.resultsText),
             fontSize = 60.sp,
             modifier = Modifier.constrainAs(text1) {
                 top.linkTo(parent.top, margin = 150.dp)
@@ -502,7 +491,7 @@ fun queryMealInfo(context: Context): mealInfo= runBlocking{
     val mCalendar= getCalendar()
     var mealInfo=mealInfo()
     val query = launch{
-        mealInfo=mealInfoDatabase.getDatabase(context).mealInfoDao().get(mCalendar.get(Calendar.YEAR),mCalendar.get(Calendar.MONTH)+1,mCalendar.get(Calendar.DAY_OF_MONTH),mCalendar.get(Calendar.AM_PM))
+        mealInfo=mealInfoDatabase.getDatabase(context).mealInfoDao().get(mCalendar.get(Calendar.YEAR),mCalendar.get(Calendar.MONTH)+1,mCalendar.get(Calendar.DAY_OF_MONTH),getAmPm(mCalendar))
     }
     query.join()
     return@runBlocking mealInfo
@@ -514,28 +503,28 @@ fun getCalendar():Calendar{
     return mCalendar
 }
 fun updateResult(result: Int,context: Context)= runBlocking{
-    var mealInfo= queryMealInfo(context)
+    val mealInfo= queryMealInfo(context)
     mealInfo.result=result
     val job = launch {mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo)}
     job.join()
     return@runBlocking
 }
 fun updateEgg(egg: Boolean,context: Context)= runBlocking{
-    var mealInfo= queryMealInfo(context)
+    val mealInfo= queryMealInfo(context)
     mealInfo.egg=egg
     val job = launch {mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo)}
     job.join()
     return@runBlocking
 }
 fun updateMeat(meat: Boolean,context: Context)= runBlocking{
-    var mealInfo= queryMealInfo(context)
+    val mealInfo= queryMealInfo(context)
     mealInfo.meat=meat
     val job = launch {mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo)}
     job.join()
     return@runBlocking
 }
 fun updateVegetable(vegetable: Boolean,context: Context)= runBlocking {
-    var mealInfo = queryMealInfo(context)
+    val mealInfo = queryMealInfo(context)
     mealInfo.vegetable = vegetable
     val job = launch { mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo) }
     job.join()
@@ -548,7 +537,7 @@ fun updateLocation(location:Int,context: Context)= runBlocking {
         mealInfo.year = mCalendar.get(Calendar.YEAR)
         mealInfo.month = mCalendar.get(Calendar.MONTH)+1
         mealInfo.day = mCalendar.get(Calendar.DAY_OF_MONTH)
-        mealInfo.mealNumber = mCalendar.get(Calendar.AM_PM)
+        mealInfo.mealNumber = getAmPm(mCalendar)
         mealInfo.canteenNumber = 0
         mealInfo.windowText = ""
         mealInfo.result = 0
@@ -561,13 +550,18 @@ fun updateLocation(location:Int,context: Context)= runBlocking {
     job.join()
     return@runBlocking
 }
+fun getAmPm(mCalendar: Calendar):Int{
+    if(mCalendar.get(Calendar.HOUR_OF_DAY)<=13){
+        return 0
+    }else return 1
+}
 fun checkStatus(context: Context):Int= runBlocking{
     val mCalendar= getCalendar()
     var mealInfo: mealInfo
     var flag=0
     val query = launch{
         try {
-            mealInfo=mealInfoDatabase.getDatabase(context).mealInfoDao().get(mCalendar.get(Calendar.YEAR),mCalendar.get(Calendar.MONTH)+1,mCalendar.get(Calendar.DAY_OF_MONTH),mCalendar.get(Calendar.AM_PM))
+            mealInfo=mealInfoDatabase.getDatabase(context).mealInfoDao().get(mCalendar.get(Calendar.YEAR),mCalendar.get(Calendar.MONTH)+1,mCalendar.get(Calendar.DAY_OF_MONTH),getAmPm(mCalendar))
             if (mealInfo.result==-1)flag=0 else flag=1
         }catch(_:Exception){}
     }
@@ -575,7 +569,7 @@ fun checkStatus(context: Context):Int= runBlocking{
     return@runBlocking flag
 }
 fun update(canteenNumber: Int, windowText: String,context: Context)=runBlocking{
-    var mealInfo = queryMealInfo(context)
+    val mealInfo = queryMealInfo(context)
     mealInfo.canteenNumber = canteenNumber
     mealInfo.windowText = windowText
     val job = launch { mealInfoDatabase.getDatabase(context).mealInfoDao().insert(mealInfo) }
@@ -698,8 +692,8 @@ fun historyPage(modifier: Modifier = Modifier, navController: NavController, con
         Modifier.fillMaxWidth()
     ){
         val (text1,text2,icon1,icon2) = createRefs()
-        var scrollState1= rememberScrollState()
-        var scrollState2= rememberScrollState()
+        val scrollState1= rememberScrollState()
+        val scrollState2= rememberScrollState()
         IconButton(
             onClick = {
                 navController.navigate("mainPage")
@@ -785,7 +779,6 @@ fun historyDisplayText(context: Context){
             fontSize = 18.sp,
             lineHeight = 30.sp,
             color = MaterialTheme.colorScheme.primary,
-            //modifier = Modifier.padding(20.dp)
         )
         Text(
             text = mealNumberText.toString(),
@@ -950,28 +943,24 @@ fun analyseDisplayText(context: Context){
         Text(
             text = canteenText.toString(),
             fontSize = 20.sp,
-            //fontFamily = FontFamily.Monospace,
             lineHeight = 40.sp,
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
             text = windowText.toString(),
             fontSize = 20.sp,
-            //fontFamily = FontFamily.Monospace,
             lineHeight = 40.sp,
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
             text = windowDetailText.toString(),
             fontSize = 20.sp,
-            //fontFamily = FontFamily.Monospace,
             lineHeight = 40.sp,
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
         Text(
             text = timesText.toString(),
             fontSize = 20.sp,
-            //fontFamily = FontFamily.Monospace,
             lineHeight = 40.sp,
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
@@ -979,7 +968,6 @@ fun analyseDisplayText(context: Context){
             text = resultText.toString(),
             color = MaterialTheme.colorScheme.primary,
             fontSize = 20.sp,
-            //fontFamily = FontFamily.Monospace,
             lineHeight = 40.sp,
             modifier = Modifier.padding(start = 10.dp,top=0.dp,end=0.dp,bottom=0.dp)
         )
