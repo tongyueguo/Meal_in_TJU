@@ -27,7 +27,6 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Egg
-import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Loop
 import androidx.compose.material.icons.filled.Park
@@ -36,6 +35,7 @@ import androidx.compose.material.icons.filled.SetMeal
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Help
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material.icons.twotone.Egg
 import androidx.compose.material.icons.twotone.Park
 import androidx.compose.material.icons.twotone.SetMeal
@@ -203,7 +203,7 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
     ConstraintLayout(
         Modifier.fillMaxWidth()
     ){
-        val (text1,text2,text3,text4,text5,icon1,icon2,icon3,icon4,icon5,icon6,icon7,iconGroup) = createRefs()
+        val (text1,text2,text3,text4,text5,text6,icon1,icon2,icon3,icon4,icon5,icon6,icon7,iconGroup) = createRefs()
         ///////////////////////////////////////////////////导航栏
         IconButton(
             onClick = {
@@ -340,6 +340,15 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
                 Icon(Icons.Filled.Loop, null, modifier = Modifier.size(60.dp))
             }
         }
+        AnimatedVisibility (status!=0,
+            modifier = Modifier.constrainAs(text6) {
+                top.linkTo(parent.top, margin = 150.dp)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+            }
+        ){
+            warningText(modifier = Modifier, context = context)
+        }
         ///////////////////////////////////////////////////选择界面
         AnimatedVisibility (status==0,
             modifier = Modifier.constrainAs(iconGroup) {
@@ -398,6 +407,41 @@ fun mainPage(modifier: Modifier = Modifier, navController: NavController, contex
             ){
                 Icon(Icons.Filled.RestaurantMenu, null, modifier = Modifier.size(100.dp))
             }
+        }
+    }
+}
+@Composable
+fun warningText(modifier: Modifier, context: Context){
+    val all:List<mealInfo> = remember {
+        getHistoryList(context)
+    }
+    val eggList = mutableListOf<Boolean>()
+    val meatList = mutableListOf<Boolean>()
+    val vegetableList = mutableListOf<Boolean>()
+    var flagEgg=false
+    var flagMeat=false
+    var flagVegetable=false
+    for(mealInfo in all){
+        eggList.add(mealInfo.egg)
+        meatList.add(mealInfo.meat)
+        vegetableList.add(mealInfo.vegetable)
+    }
+    eggList.reverse()
+    meatList.reverse()
+    vegetableList.reverse()
+    if(eggList.getOrElse(0){true}||eggList.getOrElse(1){true}){
+    }else flagEgg=true
+    if(meatList.getOrElse(0){true}||meatList.getOrElse(1){true}){
+    }else flagMeat=true
+    if(vegetableList.getOrElse(0){true}||vegetableList.getOrElse(1){true}){
+    }else flagVegetable=true
+    if (flagEgg||flagMeat||flagVegetable){
+        Row {
+            Icon(Icons.Outlined.WarningAmber, contentDescription ="",tint=MaterialTheme.colorScheme.error)
+            Text(text = stringResource(R.string.warningText),color=MaterialTheme.colorScheme.error)
+            if (flagEgg) Text(text = " "+stringResource(R.string.warningEggText),color=MaterialTheme.colorScheme.error)
+            if (flagMeat) Text(text = " "+stringResource(R.string.warningMeatText),color=MaterialTheme.colorScheme.error)
+            if (flagVegetable) Text(text = " "+stringResource(R.string.warningVegetableText),color=MaterialTheme.colorScheme.error)
         }
     }
 }

@@ -43,6 +43,11 @@
     <string name="help3Text">以获取最新窗口信息字符串</string>
     <string name="changeSuceessText">更改成功</string>
     <string name="resultsText">评价</string>
+    <string name="warningText">您已经至少两餐没有摄入</string>
+    <string name="warningEggText">蛋类</string>
+    <string name="warningMeatText">肉类</string>
+    <string name="warningVegetableText">蔬菜</string>
+
 
 
 
