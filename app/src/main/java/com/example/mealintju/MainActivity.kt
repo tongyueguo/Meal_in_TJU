@@ -84,7 +84,7 @@ import kotlinx.coroutines.runBlocking
 import java.util.Calendar
 
 const val maxCanteenNumber=7
-val maxWindowNumber= arrayOf(20,20,20,20,20,20,25)
+val maxWindowNumber= arrayOf(24,25,17,18,18,20,25)
 /* ////////////////////////////////////////////////
 mealInfo用户每餐
 mealData窗口信息
